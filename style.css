@@ -728,3 +728,7 @@ textarea:focus {
   margin: 8px 0 0;
   padding: 4px 0;
 }
+
+.audio-link[hidden] {
+  display: none;
+}
