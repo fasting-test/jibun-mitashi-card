@@ -30,6 +30,8 @@ function createGas() {
   function makeSheet() {
     const data = []
     let maxRows = 1000
+    // 本物のスプレッドシートと同じく、「=」で始まる文字列は計算式になって「#ERROR!」になる
+    const parse = (v) => (typeof v === "string" && v.startsWith("=") ? "#ERROR!" : v)
     const pad = () => {
       const width = Math.max(0, ...data.map((r) => r.length))
       data.forEach((r) => {
@@ -53,7 +55,7 @@ function createGas() {
         },
       }),
       appendRow: (row) => {
-        data.push(row.slice())
+        data.push(row.map(parse))
       },
       deleteRow: (n) => {
         data.splice(n - 1, 1)
@@ -65,14 +67,14 @@ function createGas() {
           },
           setValue(v) {
             ensure(r, c)
-            data[r - 1][c - 1] = v
+            data[r - 1][c - 1] = parse(v)
             return range
           },
           setValues(vs) {
             vs.forEach((row, i) =>
               row.forEach((v, j) => {
                 ensure(r + i, c + j)
-                data[r + i - 1][c + j - 1] = v
+                data[r + i - 1][c + j - 1] = parse(v)
               })
             )
             return range

@@ -93,12 +93,29 @@ function postsSheet() {
   return getSheet(POSTS_SHEET, POST_HEADERS)
 }
 
+// 先頭が「=」の文字列は、スプレッドシートに計算式として実行されてしまい、「#ERROR!」に化ける
+// (セルを「文字列」の書式にしても防げない)。そこで、先頭が「= + - @」の文字列には、
+// 見えない文字(ゼロ幅スペース)を先頭に付けてただの文字として保存し、読むときに外す。
+const SAFE_PREFIX = "\u200B"
+
+function encodeCell(value) {
+  if (typeof value === "string" && (/^[=+\-@]/.test(value) || value.charAt(0) === SAFE_PREFIX)) {
+    return SAFE_PREFIX + value
+  }
+  return value
+}
+
+function decodeCell(value) {
+  if (typeof value === "string" && value.charAt(0) === SAFE_PREFIX) return value.slice(1)
+  return value
+}
+
 function readTable(sheet, headers) {
   const data = sheet.getDataRange().getValues()
   const rows = []
   for (let i = 1; i < data.length; i++) {
     const obj = {}
-    headers.forEach((h, c) => (obj[h] = data[i][c]))
+    headers.forEach((h, c) => (obj[h] = decodeCell(data[i][c])))
     obj._row = i + 1 // 1-indexedの行番号
     rows.push(obj)
   }
@@ -111,13 +128,13 @@ function appendTextRow(sheet, values) {
   if (row > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 100)
   const range = sheet.getRange(row, 1, 1, values.length)
   range.setNumberFormat("@")
-  range.setValues([values])
+  range.setValues([values.map(encodeCell)])
 }
 
 function setCell(sheet, headers, row, header, value) {
   const range = sheet.getRange(row, headers.indexOf(header) + 1)
   range.setNumberFormat("@")
-  range.setValue(value)
+  range.setValue(encodeCell(value))
 }
 
 // ---------------- 日付 ----------------
@@ -137,6 +154,11 @@ function addDaysStr(dateStr, delta) {
 
 function toDateStr(value) {
   if (value instanceof Date) return Utilities.formatDate(value, "Asia/Tokyo", "yyyy-MM-dd")
+  return String(value || "")
+}
+
+function toIsoStr(value) {
+  if (value instanceof Date) return value.toISOString()
   return String(value || "")
 }
 
@@ -186,8 +208,8 @@ function formatStudent(obj, withPosts) {
     start_date: toDateStr(obj.start_date),
     stamp_dates: parseDatesCell(obj.stamp_dates),
     achieved_count: Number(obj.achieved_count || 0),
-    created_at: String(obj.created_at),
-    updated_at: String(obj.updated_at),
+    created_at: toIsoStr(obj.created_at),
+    updated_at: toIsoStr(obj.updated_at),
   }
   if (withPosts) student.my_posts = myPostsOf(obj.id)
   return student
@@ -301,7 +323,7 @@ function getFeed(studentId) {
 
   const posts = readTable(postsSheet(), POST_HEADERS)
     .filter((p) => String(p.hidden) !== "1")
-    .sort((a, b) => (String(a.created_at) < String(b.created_at) ? 1 : -1))
+    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
     .slice(0, FEED_LIMIT)
     .map((p) => {
       const reactions = parseReactions(p.reactions)
@@ -355,7 +377,7 @@ function adminList(pin) {
 
   const students = readTable(studentsSheet(), STUDENT_HEADERS).map((s) => formatStudent(s, false))
   const posts = readTable(postsSheet(), POST_HEADERS)
-    .sort((a, b) => (String(a.created_at) < String(b.created_at) ? 1 : -1))
+    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
     .map((p) => {
       const counts = countsOf(parseReactions(p.reactions))
       return {

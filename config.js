@@ -5,5 +5,5 @@
 window.APP_CONFIG = {
   webAppUrl: ["localhost", "127.0.0.1"].includes(location.hostname)
     ? "/gas"
-    : "https://script.google.com/macros/s/xxxx/exec",
+    : "https://script.google.com/macros/s/AKfycbxU3fFSNOTUzJiws6Gjbq8qd9cTuRBeMNF_cEIf9OH5agRI_GL_F4b-8e2i7jpKgLdCzA/exec",
 }
