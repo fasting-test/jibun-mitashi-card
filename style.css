@@ -762,3 +762,37 @@ textarea:focus {
   color: var(--background);
   box-shadow: var(--glow-shadow);
 }
+
+/* --- オープン前の画面 --- */
+
+.soon-count {
+  margin: 0 0 28px;
+  padding: 22px 16px;
+  border-radius: 20px;
+  text-align: center;
+  background: var(--surface-1);
+  border: 2px solid var(--accent-2);
+  box-shadow: var(--glow-shadow);
+}
+
+.soon-count-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+}
+
+.soon-count-days {
+  margin: 8px 0 0;
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.soon-back {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}

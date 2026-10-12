@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
   <main id="main-el">
@@ -25,6 +25,20 @@
     <!-- ==================== 受講生タブ ==================== -->
     <div id="tab-panel-student" class="tab-panel">
       <div id="student-loading" class="loading">読み込み中...</div>
+
+      <!-- オープン前(11/1より前)の画面 -->
+      <div id="student-soon" hidden>
+        <div class="lead">
+          <p class="eyebrow">自分満たしカード</p>
+          <h1 id="soon-title"></h1>
+          <p>毎日1つ「今日自分を満たしたこと」を書いて、<br />スタンプをためていく、30日間のチャレンジです。</p>
+        </div>
+        <div class="soon-count">
+          <p class="soon-count-label">オープンまで</p>
+          <p class="soon-count-days" id="soon-days"></p>
+        </div>
+        <a class="btn-primary soon-back" href="https://fasting-test.github.io/challenge-stamp-card/">チャレンジシートへ</a>
+      </div>
 
       <!-- 登録フォーム -->
       <div id="student-register" hidden>
@@ -167,7 +181,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="config.js?v=1"></script>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
   <script>
     const REGISTER_DRAFT_KEY = "jmc_register_draft"
     const ADMIN_PIN_KEY = "jmc_admin_pin"
@@ -240,7 +254,28 @@
       return todayOffset >= PROGRAM_LENGTH ? lastDayOf(student.start_date) : todayStr()
     }
 
+    const studentSoonEl = document.getElementById("student-soon")
+
+    // オープン前(開始日より前)は、登録も記録もできないので、お知らせの画面だけを出す
+    function showOpeningSoon() {
+      const daysLeft = -dayOffsetFromStart(PROGRAM_START_DATE)
+      const title = document.getElementById("soon-title")
+      title.appendChild(document.createTextNode(`${formatMdWeekday(PROGRAM_START_DATE)}に、`))
+      title.appendChild(document.createElement("br"))
+      title.appendChild(document.createTextNode("オープンします。"))
+      document.getElementById("soon-days").textContent = daysLeft === 1 ? "あと1日(明日です)" : `あと${daysLeft}日`
+      studentLoadingEl.hidden = true
+      studentRegisterEl.hidden = true
+      studentCardEl.hidden = true
+      studentSoonEl.hidden = false
+    }
+
     async function initStudentTab() {
+      if (dayOffsetFromStart(PROGRAM_START_DATE) < 0) {
+        showOpeningSoon()
+        return
+      }
+
       const studentId = getStudentIdFromLocalStorage()
       if (studentId) {
         try {

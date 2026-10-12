@@ -122,7 +122,11 @@ function setCell(sheet, headers, row, header, value) {
 
 // ---------------- 日付 ----------------
 
+// 公開前の動作確認用: スクリプトプロパティ TEST_TODAY(例: 2026-11-05)を入れると、
+// その日を「今日」として扱う。確認が終わったら、必ずこのプロパティを削除すること。
 function todayStr() {
+  const test = PropertiesService.getScriptProperties().getProperty("TEST_TODAY")
+  if (test && /^\d{4}-\d{2}-\d{2}$/.test(test)) return test
   return Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyy-MM-dd")
 }
 

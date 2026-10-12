@@ -21,9 +21,9 @@ function isLocalhost() {
   return ["localhost", "127.0.0.1"].includes(location.hostname)
 }
 
-// 手元での確認用: localhost のときだけ、?today=2026-11-05 のように今日の日付を変えられる
+// 動作確認用: URLの末尾に ?today=2026-11-05 を付けると、画面上の「今日」をその日にして見られる。
+// (画面の見え方が変わるだけ。書き込みの日付の判定はサーバー側で行うので、これで不正はできない)
 function devTodayOverride() {
-  if (!isLocalhost()) return null
   const v = new URLSearchParams(location.search).get("today")
   return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null
 }
