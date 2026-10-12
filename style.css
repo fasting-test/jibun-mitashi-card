@@ -796,3 +796,8 @@ textarea:focus {
   text-align: center;
   text-decoration: none;
 }
+
+/* display を指定した要素でも、hidden 属性のときは確実に隠す */
+.btn-link[hidden] {
+  display: none;
+}
