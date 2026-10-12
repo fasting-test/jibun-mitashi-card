@@ -732,3 +732,33 @@ textarea:focus {
 .audio-link[hidden] {
   display: none;
 }
+
+/* --- ツールの切り替え(チャレンジシート ⇔ 自分満たし) --- */
+
+.site-switch {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.site-switch-item {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 999px;
+  text-align: center;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.site-switch-item.active {
+  background: var(--gradient-primary);
+  color: var(--background);
+  box-shadow: var(--glow-shadow);
+}
