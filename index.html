@@ -167,7 +167,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="config.js?v=1"></script>
-  <script src="app.js?v=1"></script>
+  <script src="app.js?v=2"></script>
   <script>
     const REGISTER_DRAFT_KEY = "jmc_register_draft"
     const ADMIN_PIN_KEY = "jmc_admin_pin"
@@ -251,6 +251,7 @@
       }
 
       if (student) {
+        setSharedDisplayName(student.display_name)
         applyStudent(student)
         todayOffset = dayOffsetFromStart(student.start_date)
         selectedDate = defaultSelectedDate()
@@ -272,6 +273,8 @@
       } catch {
         // 無視
       }
+      // チャレンジシート側でログインした名前があれば、名前欄に最初から入れておく
+      if (!nameInput.value) nameInput.value = getSharedDisplayName() || ""
 
       studentLoadingEl.hidden = true
       studentCardEl.hidden = true
@@ -319,6 +322,7 @@
     document.getElementById("back-to-login-btn").addEventListener("click", () => {
       if (!confirm("ログイン画面に戻ります。\n(これまでの記録は消えません)")) return
       clearStudentIdFromLocalStorage()
+      clearSharedDisplayName()
       student = null
       nameInput.value = ""
       registerErrorEl.hidden = true

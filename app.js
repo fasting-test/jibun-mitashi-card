@@ -103,6 +103,36 @@ function clearStudentIdFromLocalStorage() {
   }
 }
 
+// ---- 名前の引き継ぎ(チャレンジシート ⇔ 自分満たし) ----
+// 2つのツールは同じ fasting-test.github.io に置かれているので、端末の記憶(localStorage)を共有できる。
+// 片方でログインした名前を覚えておき、もう片方の登録画面の名前欄に最初から入れる。
+// (入れるだけ。登録は、もう片方の画面で「はじめる」を押したときに行われる)
+const SHARED_NAME_KEY = "skipf_shared_display_name"
+
+function getSharedDisplayName() {
+  try {
+    return localStorage.getItem(SHARED_NAME_KEY)
+  } catch {
+    return null
+  }
+}
+
+function setSharedDisplayName(name) {
+  try {
+    localStorage.setItem(SHARED_NAME_KEY, name)
+  } catch {
+    // 無視
+  }
+}
+
+function clearSharedDisplayName() {
+  try {
+    localStorage.removeItem(SHARED_NAME_KEY)
+  } catch {
+    // 無視
+  }
+}
+
 // 書きかけの文章の自動保存(日付ごと)
 function draftKey(date) {
   return `jmc_draft_${date}`
