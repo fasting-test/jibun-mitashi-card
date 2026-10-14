@@ -24,8 +24,17 @@ const PORT = Number(args.port || 8091)
 const ROOT = path.join(__dirname, "..")
 const CODE = fs.readFileSync(path.join(ROOT, "apps-script", "Code.gs"), "utf8")
 
+// 写真の置き場(createGas を作り直しても残す)
+const photos = {}
+function createFile(blob) {
+  const id = "photo-" + require("crypto").randomUUID()
+  photos[id] = { bytes: Buffer.from(blob.bytes), mime: blob.mime }
+  return { getId: () => id, setSharing() {} }
+}
+
 function createGas() {
   const sheets = {}
+  const props = { ADMIN_PIN: args["admin-pin"] || null, PHOTO_URL_BASE: "/__photo?id=" }
 
   function makeSheet() {
     const data = []
@@ -100,11 +109,30 @@ function createGas() {
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     PropertiesService: {
       getScriptProperties: () => ({
-        getProperty: (k) => (k === "ADMIN_PIN" ? args["admin-pin"] || null : null),
+        getProperty: (k) => (k in props ? props[k] : null),
+        setProperty: (k, v) => {
+          props[k] = v
+        },
       }),
+    },
+    // 写真の保存(メモリ上)。/__photo?id=... で取り出せる
+    DriveApp: {
+      Access: { ANYONE_WITH_LINK: "link" },
+      Permission: { VIEW: "view" },
+      createFolder: (name) => ({ getId: () => "folder-" + name, createFile: (blob) => createFile(blob) }),
+      getFolderById: (id) => {
+        if (!id.startsWith("folder-")) throw new Error("no folder")
+        return { getId: () => id, createFile: (blob) => createFile(blob) }
+      },
+      getFileById: (id) => {
+        if (!photos[id]) throw new Error("no file")
+        return { setTrashed: () => delete photos[id] }
+      },
     },
     Utilities: {
       getUuid: () => require("crypto").randomUUID(),
+      base64Decode: (b64) => Array.from(Buffer.from(b64, "base64")),
+      newBlob: (bytes, mime, name) => ({ bytes, mime, name }),
       formatDate: (d, tz, fmt) => {
         if (fmt !== "yyyy-MM-dd") throw new Error("fake formatDate: unsupported format " + fmt)
         const offset = tz === "Asia/Tokyo" ? 9 * 3600 * 1000 : 0
@@ -149,6 +177,7 @@ http
     const url = new URL(req.url, `http://localhost:${PORT}`)
 
     if (url.pathname === "/__reset") {
+      Object.keys(photos).forEach((k) => delete photos[k])
       const now = gas.__now
       gas = createGas()
       gas.__now = now
@@ -159,6 +188,18 @@ http
       const d = url.searchParams.get("today")
       gas.__now = d ? Date.parse(d + "T03:00:00Z") : null
       res.end("today=" + d)
+      return
+    }
+
+    if (url.pathname === "/__photo") {
+      const photo = photos[url.searchParams.get("id")]
+      if (!photo) {
+        res.writeHead(404)
+        res.end("no photo")
+        return
+      }
+      res.writeHead(200, { "Content-Type": photo.mime })
+      res.end(photo.bytes)
       return
     }
 

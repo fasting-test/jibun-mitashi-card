@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
   <main id="main-el">
@@ -18,7 +18,8 @@
     </nav>
 
     <div class="tab-bar">
-      <button type="button" id="tab-btn-student" class="active">受講生</button>
+      <button type="button" id="tab-btn-student" class="active">スタンプカード</button>
+      <button type="button" id="tab-btn-community">交流</button>
       <button type="button" id="tab-btn-admin">管理者</button>
     </div>
 
@@ -134,6 +135,54 @@
       </div>
     </div>
 
+    <!-- ==================== 交流タブ(期ごとのグループ) ==================== -->
+    <div id="tab-panel-community" class="tab-panel" hidden>
+      <div id="community-loading" class="loading">読み込み中...</div>
+
+      <!-- 使えない状態(未ログイン・オープン前・期の設定なし)のお知らせ -->
+      <div id="community-gate" hidden>
+        <p class="write-closed" id="community-gate-text"></p>
+        <button type="button" class="btn-primary gate-btn" id="community-gate-btn" hidden>スタンプカードへ</button>
+      </div>
+
+      <div id="community-main" hidden>
+        <div class="lead compact">
+          <p class="eyebrow" id="community-group-label"></p>
+          <h1>「好き」と気づきを、<br />分かち合おう。</h1>
+          <p>お名前は出ません。同じ期のメンバーだけが見られます。</p>
+        </div>
+
+        <!-- 投稿する -->
+        <section class="compose" id="compose">
+          <div class="kind-toggle" role="radiogroup" aria-label="投稿の種類" id="kind-toggle"></div>
+          <textarea id="compose-text" rows="4" maxlength="500"></textarea>
+          <p class="char-count" id="compose-count">0 / 500</p>
+          <div class="photo-row">
+            <label class="photo-pick" for="compose-photo">📷 写真を添える</label>
+            <input id="compose-photo" type="file" accept="image/*" hidden />
+            <button type="button" class="btn-link inline" id="compose-photo-remove" hidden>写真を外す</button>
+          </div>
+          <img id="compose-preview" class="photo-preview" alt="添付する写真のプレビュー" hidden />
+          <button type="button" class="btn-primary" id="compose-btn">投稿する</button>
+          <p class="write-note">※ お名前は出ません。同じ期のメンバーに表示されます。</p>
+          <p class="error" id="compose-error" hidden></p>
+        </section>
+
+        <div class="diamond-divider"><span class="diamond"></span></div>
+
+        <!-- みんなの投稿 -->
+        <section class="feed" id="community-feed">
+          <h2 class="feed-title">みんなの投稿</h2>
+          <p class="feed-sub">「私もやりました!」「取り入れたいです!」など、コメントや返信を送れます。</p>
+          <div id="community-list"></div>
+          <p class="loading small" id="community-feed-loading" hidden>読み込み中...</p>
+          <p class="feed-empty" id="community-empty" hidden>まだ投稿がありません。最初の1人になろう!</p>
+          <p class="error" id="community-error" hidden></p>
+          <button type="button" class="btn-link" id="community-reload-btn">最新の投稿に更新する</button>
+        </section>
+      </div>
+    </div>
+
     <!-- ==================== 管理者タブ ==================== -->
     <div id="tab-panel-admin" class="tab-panel" hidden>
       <div id="admin-pin-gate">
@@ -159,6 +208,7 @@
               <thead>
                 <tr>
                   <th>お名前</th>
+                  <th>期</th>
                   <th>経過</th>
                   <th>達成日数</th>
                   <th>最終更新</th>
@@ -172,6 +222,26 @@
           <p class="admin-summary">不適切な投稿は「非表示にする」を押すと、みんなの画面から消えます(本人の画面とスタンプは、そのまま残ります)。</p>
           <div id="admin-posts"></div>
 
+          <h2 class="admin-section-title">期(グループ)の設定</h2>
+          <p class="admin-summary">交流タブは、同じ期のメンバーだけで見せ合います。受講生の「呼び名」と期を登録してください(呼び名は、受講生が入力する名前と、まったく同じにします)。</p>
+          <div class="admin-roster">
+            <label for="roster-text">まとめて登録(1行に1人、「呼び名,期」の形。マイページの一覧をコピーして貼り付けできます)</label>
+            <textarea id="roster-text" rows="4" placeholder="例:&#10;はなちゃん,3期&#10;さくら,4期"></textarea>
+            <button type="button" class="btn-primary admin-small-btn" id="roster-import-btn">まとめて登録する</button>
+            <div class="roster-one">
+              <input id="roster-name" type="text" maxlength="40" placeholder="呼び名" />
+              <input id="roster-group" type="text" maxlength="20" placeholder="期(例: 3期)" />
+              <button type="button" class="btn-primary admin-small-btn" id="roster-set-btn">1人登録</button>
+            </div>
+            <p class="admin-summary" id="roster-summary"></p>
+            <p class="error" id="roster-error" hidden></p>
+            <p class="admin-ok" id="roster-ok" hidden></p>
+          </div>
+
+          <h2 class="admin-section-title">交流の管理</h2>
+          <p class="admin-summary">不適切な投稿やコメントは「非表示にする」で、メンバーの画面から消えます。「表示に戻す」で元に戻せます。</p>
+          <div id="admin-community"></div>
+
           <button type="button" class="btn-primary admin-refresh" id="admin-refresh-btn">再読み込み</button>
         </div>
         <p class="error" id="admin-error" hidden></p>
@@ -181,32 +251,33 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="config.js?v=1"></script>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
   <script>
     const REGISTER_DRAFT_KEY = "jmc_register_draft"
     const ADMIN_PIN_KEY = "jmc_admin_pin"
     const FEED_PAGE_SIZE = 30
 
     const mainEl = document.getElementById("main-el")
-    const tabBtnStudent = document.getElementById("tab-btn-student")
-    const tabBtnAdmin = document.getElementById("tab-btn-admin")
-    const tabPanelStudent = document.getElementById("tab-panel-student")
-    const tabPanelAdmin = document.getElementById("tab-panel-admin")
+    const tabs = {
+      student: { btn: document.getElementById("tab-btn-student"), panel: document.getElementById("tab-panel-student") },
+      community: { btn: document.getElementById("tab-btn-community"), panel: document.getElementById("tab-panel-community") },
+      admin: { btn: document.getElementById("tab-btn-admin"), panel: document.getElementById("tab-panel-admin") },
+    }
 
     // ---------------- タブ切り替え ----------------
 
     function showTab(tab) {
-      const isStudent = tab === "student"
-      tabPanelStudent.hidden = !isStudent
-      tabPanelAdmin.hidden = isStudent
-      tabBtnStudent.classList.toggle("active", isStudent)
-      tabBtnAdmin.classList.toggle("active", !isStudent)
-      mainEl.classList.toggle("wide", !isStudent)
-      if (!isStudent) initAdminTab()
+      Object.entries(tabs).forEach(([name, t]) => {
+        t.panel.hidden = name !== tab
+        t.btn.classList.toggle("active", name === tab)
+      })
+      mainEl.classList.toggle("wide", tab === "admin")
+      if (tab === "admin") initAdminTab()
+      if (tab === "community") initCommunityTab()
+      window.scrollTo(0, 0)
     }
 
-    tabBtnStudent.addEventListener("click", () => showTab("student"))
-    tabBtnAdmin.addEventListener("click", () => showTab("admin"))
+    Object.entries(tabs).forEach(([name, t]) => t.btn.addEventListener("click", () => showTab(name)))
 
     // ---------------- 受講生タブ ----------------
 
@@ -359,6 +430,7 @@
       clearStudentIdFromLocalStorage()
       clearSharedDisplayName()
       student = null
+      communityLoadedFor = null
       nameInput.value = ""
       registerErrorEl.hidden = true
       studentCardEl.hidden = true
@@ -629,6 +701,457 @@
     })
     feedReloadBtn.addEventListener("click", loadFeed)
 
+    // ---------------- 交流タブ ----------------
+
+    const communityLoadingEl = document.getElementById("community-loading")
+    const communityGateEl = document.getElementById("community-gate")
+    const communityGateTextEl = document.getElementById("community-gate-text")
+    const communityGateBtn = document.getElementById("community-gate-btn")
+    const communityMainEl = document.getElementById("community-main")
+    const communityGroupLabelEl = document.getElementById("community-group-label")
+    const kindToggleEl = document.getElementById("kind-toggle")
+    const composeTextEl = document.getElementById("compose-text")
+    const composeCountEl = document.getElementById("compose-count")
+    const composePhotoInput = document.getElementById("compose-photo")
+    const composePhotoRemoveBtn = document.getElementById("compose-photo-remove")
+    const composePreviewEl = document.getElementById("compose-preview")
+    const composeBtn = document.getElementById("compose-btn")
+    const composeErrorEl = document.getElementById("compose-error")
+    const communityListEl = document.getElementById("community-list")
+    const communityFeedLoadingEl = document.getElementById("community-feed-loading")
+    const communityEmptyEl = document.getElementById("community-empty")
+    const communityErrorEl = document.getElementById("community-error")
+    const communityReloadBtn = document.getElementById("community-reload-btn")
+
+    let communityLoadedFor = null // どの受講生IDで読み込み済みか
+    let communityGroup = ""
+    let communityPosts = []
+    let communityComments = {}
+    let composeKind = FEED_KINDS[0].kind
+    let composePhoto = null
+    let isComposing = false
+    let replyTarget = {} // 投稿ID → 返信先のコメントID
+
+    communityGateBtn.addEventListener("click", () => showTab("student"))
+
+    function showCommunityGate(message, withButton) {
+      communityLoadingEl.hidden = true
+      communityMainEl.hidden = true
+      communityGateEl.hidden = false
+      communityGateTextEl.textContent = message
+      communityGateBtn.hidden = !withButton
+    }
+
+    async function initCommunityTab() {
+      if (dayOffsetFromStart(PROGRAM_START_DATE) < 0) {
+        showCommunityGate(`交流の場は、${formatMdWeekday(PROGRAM_START_DATE)}にオープンします。`, false)
+        return
+      }
+      await studentReady
+      if (!student) {
+        showCommunityGate("まず「スタンプカード」のタブで、お名前を入れてください。", true)
+        return
+      }
+      if (communityLoadedFor === student.id) return
+      communityLoadedFor = student.id
+      communityGateEl.hidden = true
+      communityMainEl.hidden = true
+      communityLoadingEl.hidden = false
+      await loadCommunityFeed(true)
+    }
+
+    async function loadCommunityFeed(first) {
+      communityErrorEl.hidden = true
+      if (!first) communityFeedLoadingEl.hidden = false
+      try {
+        const data = await fetchGroupFeed(student.id)
+        communityGroup = data.group || ""
+        communityPosts = data.posts || []
+        communityComments = data.comments || {}
+        if (!communityGroup) {
+          communityLoadedFor = null // 期が設定されたら、次に開いたときに読み直す
+          showCommunityGate("まだ期(グループ)の設定がありません。運営にお伝えください。設定されると、同じ期のメンバーの投稿が見られるようになります。", false)
+          return
+        }
+        communityLoadingEl.hidden = true
+        communityGateEl.hidden = true
+        communityMainEl.hidden = false
+        communityGroupLabelEl.textContent = `${communityGroup}の交流の場`
+        renderKindToggle()
+        restoreComposeDraft()
+        renderCommunityFeed()
+      } catch (err) {
+        if (first) {
+          communityLoadedFor = null
+          showCommunityGate("読み込めませんでした。少し待ってから、もう一度タブを開いてください。", false)
+        } else {
+          communityErrorEl.textContent = "投稿を読み込めませんでした。少し待ってから、更新ボタンを押してください。"
+          communityErrorEl.hidden = false
+        }
+      } finally {
+        communityFeedLoadingEl.hidden = true
+      }
+    }
+
+    // ---- 投稿フォーム ----
+
+    function renderKindToggle() {
+      kindToggleEl.innerHTML = ""
+      FEED_KINDS.forEach((k) => {
+        const btn = document.createElement("button")
+        btn.type = "button"
+        btn.className = "kind-btn"
+        btn.setAttribute("role", "radio")
+        btn.setAttribute("aria-checked", String(k.kind === composeKind))
+        btn.classList.toggle("active", k.kind === composeKind)
+        btn.textContent = `${k.emoji} ${k.kind}`
+        btn.addEventListener("click", () => {
+          composeKind = k.kind
+          renderKindToggle()
+          saveComposeDraft()
+        })
+        kindToggleEl.appendChild(btn)
+      })
+      const current = FEED_KINDS.find((k) => k.kind === composeKind) || FEED_KINDS[0]
+      composeTextEl.placeholder = current.hint
+    }
+
+    function updateComposeCount() {
+      composeCountEl.textContent = `${composeTextEl.value.length} / ${MAX_POST_LENGTH}`
+    }
+
+    // 書きかけの文章と種類は、端末に自動保存する(写真は保存しない)
+    function saveComposeDraft() {
+      saveCommunityDraft({ kind: composeKind, text: composeTextEl.value })
+    }
+
+    function restoreComposeDraft() {
+      const draft = loadCommunityDraft()
+      if (draft) {
+        if (FEED_KINDS.some((k) => k.kind === draft.kind)) composeKind = draft.kind
+        composeTextEl.value = draft.text || ""
+        renderKindToggle()
+      }
+      updateComposeCount()
+    }
+
+    composeTextEl.addEventListener("input", () => {
+      updateComposeCount()
+      saveComposeDraft()
+    })
+
+    composePhotoInput.addEventListener("change", async () => {
+      const file = composePhotoInput.files && composePhotoInput.files[0]
+      if (!file) return
+      composeErrorEl.hidden = true
+      try {
+        composePhoto = await compressPhoto(file)
+        composePreviewEl.src = composePhoto.previewUrl
+        composePreviewEl.hidden = false
+        composePhotoRemoveBtn.hidden = false
+      } catch (err) {
+        clearComposePhoto()
+        showComposeError(err && err.message ? err.message : "写真を読み込めませんでした")
+      }
+    })
+
+    function clearComposePhoto() {
+      composePhoto = null
+      composePhotoInput.value = ""
+      composePreviewEl.hidden = true
+      composePreviewEl.removeAttribute("src")
+      composePhotoRemoveBtn.hidden = true
+    }
+
+    composePhotoRemoveBtn.addEventListener("click", clearComposePhoto)
+
+    function showComposeError(message) {
+      composeErrorEl.textContent = message
+      composeErrorEl.hidden = false
+    }
+
+    composeBtn.addEventListener("click", async () => {
+      if (isComposing) return
+      const text = composeTextEl.value.trim()
+      if (!text) {
+        showComposeError("内容を入力してください")
+        return
+      }
+      if (text.length > MAX_POST_LENGTH) {
+        showComposeError(`${MAX_POST_LENGTH}文字以内で入力してください`)
+        return
+      }
+      isComposing = true
+      composeBtn.disabled = true
+      composeBtn.textContent = composePhoto ? "写真を送っています..." : "送信中..."
+      composeErrorEl.hidden = true
+      try {
+        await createFeedPost(student.id, composeKind, text, composePhoto)
+        composeTextEl.value = ""
+        updateComposeCount()
+        saveCommunityDraft(null)
+        clearComposePhoto()
+        fireConfetti()
+        await loadCommunityFeed(false)
+      } catch (err) {
+        showComposeError(err && err.message ? err.message : "投稿できませんでした。もう一度お試しください。")
+      } finally {
+        isComposing = false
+        composeBtn.disabled = false
+        composeBtn.textContent = "投稿する"
+      }
+    })
+
+    // ---- 投稿の一覧 ----
+
+    function renderCommunityFeed() {
+      communityListEl.innerHTML = ""
+      communityEmptyEl.hidden = communityPosts.length > 0
+      communityPosts.forEach((post) => communityListEl.appendChild(buildCommunityItem(post)))
+    }
+
+    function kindOf(kind) {
+      return FEED_KINDS.find((k) => k.kind === kind) || { kind, emoji: "" }
+    }
+
+    function buildCommunityItem(post) {
+      const item = document.createElement("article")
+      item.className = "feed-item community-item"
+      if (post.is_mine) item.classList.add("is-mine")
+
+      const meta = document.createElement("p")
+      meta.className = "feed-meta"
+      const k = kindOf(post.kind)
+      meta.textContent = `${k.emoji} ${k.kind}・${formatDateTime(post.created_at)}${post.is_mine ? "・あなたの投稿" : ""}`
+      item.appendChild(meta)
+
+      // 本文は textContent で入れる(HTMLとして解釈させない)
+      const body = document.createElement("p")
+      body.className = "feed-text"
+      body.textContent = post.text
+      item.appendChild(body)
+
+      if (post.photo_url) {
+        const link = document.createElement("a")
+        link.href = post.photo_url
+        link.target = "_blank"
+        link.rel = "noopener noreferrer"
+        link.className = "post-photo-link"
+        const img = document.createElement("img")
+        img.className = "post-photo"
+        img.src = post.photo_url
+        img.alt = "添付された写真"
+        img.loading = "lazy"
+        link.appendChild(img)
+        item.appendChild(link)
+      }
+
+      const bar = document.createElement("div")
+      bar.className = "reaction-bar"
+      REACTIONS.forEach((r) => {
+        const btn = document.createElement("button")
+        btn.type = "button"
+        btn.className = "reaction-btn"
+        if (post.mine.includes(r.type)) btn.classList.add("is-on")
+        btn.disabled = post.is_mine
+        const count = post.counts[r.type] || 0
+        btn.textContent = `${r.emoji} ${r.label}${count > 0 ? " " + count : ""}`
+        btn.addEventListener("click", () => handleCommunityReact(post, r.type, item))
+        bar.appendChild(btn)
+      })
+      item.appendChild(bar)
+
+      item.appendChild(buildCommentsBlock(post))
+
+      if (post.is_mine) {
+        const del = document.createElement("button")
+        del.type = "button"
+        del.className = "btn-link inline danger"
+        del.textContent = "この投稿を削除する"
+        del.addEventListener("click", async () => {
+          if (!confirm("この投稿を削除します。\n(ついているコメントも一緒に消えます)")) return
+          del.disabled = true
+          try {
+            await deleteFeedPost(student.id, post.id)
+            await loadCommunityFeed(false)
+          } catch (err) {
+            del.disabled = false
+            alert(err && err.message ? err.message : "削除できませんでした")
+          }
+        })
+        item.appendChild(del)
+      }
+      return item
+    }
+
+    // 先に画面を更新して、通信が失敗したときだけ元に戻す
+    async function handleCommunityReact(post, type, itemEl) {
+      const prev = { counts: { ...post.counts }, mine: [...post.mine] }
+      const on = post.mine.includes(type)
+      post.mine = on ? post.mine.filter((t) => t !== type) : [...post.mine, type]
+      post.counts[type] = Math.max(0, (post.counts[type] || 0) + (on ? -1 : 1))
+      let current = buildCommunityItem(post)
+      itemEl.replaceWith(current)
+      try {
+        const result = await reactToFeedPost(student.id, post.id, type)
+        post.counts = result.counts
+        post.mine = result.mine
+      } catch {
+        post.counts = prev.counts
+        post.mine = prev.mine
+      }
+      current.replaceWith(buildCommunityItem(post))
+    }
+
+    // ---- コメントと返信 ----
+
+    function buildCommentsBlock(post) {
+      const wrap = document.createElement("div")
+      wrap.className = "comments"
+      const list = communityComments[post.id] || []
+      const topLevel = list.filter((c) => !c.parent_id)
+      const repliesOf = (id) => list.filter((c) => c.parent_id === id)
+
+      const head = document.createElement("p")
+      head.className = "comments-head"
+      head.textContent = list.length > 0 ? `コメント ${list.length}件` : "まだコメントはありません"
+      wrap.appendChild(head)
+
+      topLevel.forEach((c) => {
+        wrap.appendChild(buildComment(post, c, false))
+        repliesOf(c.id).forEach((r) => wrap.appendChild(buildComment(post, r, true)))
+      })
+
+      wrap.appendChild(buildCommentForm(post))
+      return wrap
+    }
+
+    function buildComment(post, c, isReply) {
+      const el = document.createElement("div")
+      el.className = "comment" + (isReply ? " reply" : "") + (c.is_mine ? " is-mine" : "")
+
+      const meta = document.createElement("p")
+      meta.className = "comment-meta"
+      const who = c.is_mine ? "あなた" : c.is_author ? "投稿した人" : "メンバー"
+      meta.textContent = `${who}・${formatDateTime(c.created_at)}`
+      el.appendChild(meta)
+
+      const text = document.createElement("p")
+      text.className = "comment-text"
+      text.textContent = c.text
+      el.appendChild(text)
+
+      const actions = document.createElement("div")
+      actions.className = "comment-actions"
+      const replyBtn = document.createElement("button")
+      replyBtn.type = "button"
+      replyBtn.className = "btn-link inline"
+      replyBtn.textContent = "返信する"
+      replyBtn.addEventListener("click", () => {
+        // 返信への返信は、元のコメントにつなげる
+        replyTarget[post.id] = { id: c.parent_id || c.id, text: c.text }
+        const form = el.parentElement.querySelector(".comment-form")
+        renderReplyChip(post, form)
+        form.querySelector("input").focus()
+      })
+      actions.appendChild(replyBtn)
+      if (c.is_mine) {
+        const del = document.createElement("button")
+        del.type = "button"
+        del.className = "btn-link inline danger"
+        del.textContent = "削除"
+        del.addEventListener("click", async () => {
+          if (!confirm("このコメントを削除します。")) return
+          del.disabled = true
+          try {
+            await deleteComment(student.id, c.id)
+            await loadCommunityFeed(false)
+          } catch (err) {
+            del.disabled = false
+            alert(err && err.message ? err.message : "削除できませんでした")
+          }
+        })
+        actions.appendChild(del)
+      }
+      el.appendChild(actions)
+      return el
+    }
+
+    function renderReplyChip(post, form) {
+      const chip = form.querySelector(".reply-chip")
+      const target = replyTarget[post.id]
+      if (!target) {
+        chip.hidden = true
+        return
+      }
+      chip.hidden = false
+      chip.querySelector("span").textContent = `「${target.text.slice(0, 14)}${target.text.length > 14 ? "…" : ""}」への返信`
+    }
+
+    function buildCommentForm(post) {
+      const form = document.createElement("form")
+      form.className = "comment-form"
+
+      const chip = document.createElement("p")
+      chip.className = "reply-chip"
+      chip.hidden = true
+      const chipText = document.createElement("span")
+      chip.appendChild(chipText)
+      const cancel = document.createElement("button")
+      cancel.type = "button"
+      cancel.className = "btn-link inline"
+      cancel.textContent = "やめる"
+      cancel.addEventListener("click", () => {
+        delete replyTarget[post.id]
+        renderReplyChip(post, form)
+      })
+      chip.appendChild(cancel)
+      form.appendChild(chip)
+
+      const row = document.createElement("div")
+      row.className = "comment-row"
+      const input = document.createElement("input")
+      input.type = "text"
+      input.maxLength = MAX_COMMENT_LENGTH
+      input.placeholder = "コメントを書く(例: 私もやりました!)"
+      input.setAttribute("aria-label", "コメント")
+      row.appendChild(input)
+      const send = document.createElement("button")
+      send.type = "submit"
+      send.className = "comment-send"
+      send.textContent = "送信"
+      row.appendChild(send)
+      form.appendChild(row)
+
+      const err = document.createElement("p")
+      err.className = "error"
+      err.hidden = true
+      form.appendChild(err)
+
+      renderReplyChip(post, form)
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault()
+        const text = input.value.trim()
+        if (!text) return
+        send.disabled = true
+        err.hidden = true
+        try {
+          const target = replyTarget[post.id]
+          await addComment(student.id, post.id, target ? target.id : "", text)
+          delete replyTarget[post.id]
+          await loadCommunityFeed(false)
+        } catch (e2) {
+          err.textContent = e2 && e2.message ? e2.message : "送信できませんでした。もう一度お試しください。"
+          err.hidden = false
+          send.disabled = false
+        }
+      })
+      return form
+    }
+
+    communityReloadBtn.addEventListener("click", () => loadCommunityFeed(false))
+
     // ---------------- 管理者タブ ----------------
 
     const adminPinGateEl = document.getElementById("admin-pin-gate")
@@ -675,6 +1198,7 @@
         adminPinGateEl.hidden = true
         adminContentEl.hidden = false
         renderAdmin(data)
+        renderAdminCommunity(await adminFeed(adminPin))
       } catch (err) {
         pinErrorEl.textContent = err && err.message ? err.message : "エラーが発生しました"
         pinErrorEl.hidden = false
@@ -690,7 +1214,9 @@
       adminListEl.hidden = true
       adminErrorEl.hidden = true
       try {
-        renderAdmin(await adminList(adminPin))
+        const [list, feed] = await Promise.all([adminList(adminPin), adminFeed(adminPin)])
+        renderAdmin(list)
+        renderAdminCommunity(feed)
       } catch (err) {
         adminLoadingEl.hidden = true
         adminErrorEl.textContent = err && err.message ? err.message : "読み込めませんでした"
@@ -731,6 +1257,7 @@
         const elapsed = Math.min(Math.max(dayOffsetFromStart(s.start_date) + 1, 0), PROGRAM_LENGTH)
         const tr = document.createElement("tr")
         tr.appendChild(cell(s.display_name))
+        tr.appendChild(cell(s.group || "未設定", s.group ? "" : "muted"))
         tr.appendChild(cell(`${elapsed}日目`))
         tr.appendChild(cell(`${s.achieved_count} / ${PROGRAM_LENGTH}`, "count"))
         tr.appendChild(cell(formatUpdated(s.updated_at)))
@@ -778,8 +1305,141 @@
 
     adminRefreshBtn.addEventListener("click", showAdminContent)
 
-    // 起動
-    initStudentTab()
+    // ---- 管理者: 期(グループ)の設定 ----
+
+    const rosterTextEl = document.getElementById("roster-text")
+    const rosterImportBtn = document.getElementById("roster-import-btn")
+    const rosterNameEl = document.getElementById("roster-name")
+    const rosterGroupEl = document.getElementById("roster-group")
+    const rosterSetBtn = document.getElementById("roster-set-btn")
+    const rosterSummaryEl = document.getElementById("roster-summary")
+    const rosterErrorEl = document.getElementById("roster-error")
+    const rosterOkEl = document.getElementById("roster-ok")
+    const adminCommunityEl = document.getElementById("admin-community")
+
+    function rosterMessage(ok, message) {
+      rosterOkEl.hidden = !ok
+      rosterErrorEl.hidden = ok
+      ;(ok ? rosterOkEl : rosterErrorEl).textContent = message
+    }
+
+    rosterImportBtn.addEventListener("click", async () => {
+      rosterImportBtn.disabled = true
+      try {
+        const result = await adminImportRoster(adminPin, rosterTextEl.value)
+        rosterTextEl.value = ""
+        rosterMessage(true, `${result.imported}人を登録しました`)
+        showAdminContent()
+      } catch (err) {
+        rosterMessage(false, err && err.message ? err.message : "登録できませんでした")
+      } finally {
+        rosterImportBtn.disabled = false
+      }
+    })
+
+    rosterSetBtn.addEventListener("click", async () => {
+      rosterSetBtn.disabled = true
+      try {
+        const result = await adminSetGroup(adminPin, rosterNameEl.value, rosterGroupEl.value)
+        rosterNameEl.value = ""
+        rosterGroupEl.value = ""
+        rosterMessage(true, result.group ? `${result.display_name} を ${result.group} に登録しました` : `${result.display_name} の期を外しました`)
+        showAdminContent()
+      } catch (err) {
+        rosterMessage(false, err && err.message ? err.message : "登録できませんでした")
+      } finally {
+        rosterSetBtn.disabled = false
+      }
+    })
+
+    // ---- 管理者: 交流の管理 ----
+
+    function renderAdminCommunity(data) {
+      const groups = {}
+      data.roster.forEach((r) => {
+        if (r.group) groups[r.group] = (groups[r.group] || 0) + 1
+      })
+      const parts = Object.keys(groups).sort().map((g) => `${g}: ${groups[g]}人`)
+      rosterSummaryEl.textContent = parts.length ? `登録済み: ${parts.join(" / ")}` : "まだ誰も登録されていません"
+
+      adminCommunityEl.innerHTML = ""
+      if (data.posts.length === 0) {
+        const p = document.createElement("p")
+        p.className = "feed-empty"
+        p.textContent = "まだ投稿がありません"
+        adminCommunityEl.appendChild(p)
+        return
+      }
+      data.posts.forEach((post) => adminCommunityEl.appendChild(buildAdminCommunityPost(post)))
+    }
+
+    function adminToggleButton(label, onClick) {
+      const btn = document.createElement("button")
+      btn.type = "button"
+      btn.className = "btn-link inline admin-hide-btn"
+      btn.textContent = label
+      btn.addEventListener("click", async () => {
+        btn.disabled = true
+        try {
+          await onClick()
+          showAdminContent()
+        } catch (err) {
+          adminErrorEl.textContent = err && err.message ? err.message : "変更できませんでした"
+          adminErrorEl.hidden = false
+          btn.disabled = false
+        }
+      })
+      return btn
+    }
+
+    function buildAdminCommunityPost(post) {
+      const item = document.createElement("article")
+      item.className = "feed-item admin-post"
+      if (post.hidden) item.classList.add("is-hidden")
+
+      const meta = document.createElement("p")
+      meta.className = "feed-meta"
+      const total = Object.values(post.counts).reduce((a, b) => a + b, 0)
+      const k = kindOf(post.kind)
+      meta.textContent = `${post.group}・${post.display_name}・${k.emoji} ${k.kind}・${formatDateTime(post.created_at)}・リアクション${total}件${post.hidden ? "・非表示中" : ""}`
+      item.appendChild(meta)
+
+      const body = document.createElement("p")
+      body.className = "feed-text"
+      body.textContent = post.text
+      item.appendChild(body)
+
+      if (post.photo_url) {
+        const link = document.createElement("a")
+        link.href = post.photo_url
+        link.target = "_blank"
+        link.rel = "noopener noreferrer"
+        link.className = "btn-link inline"
+        link.textContent = "写真を開く"
+        item.appendChild(link)
+      }
+
+      item.appendChild(adminToggleButton(post.hidden ? "表示に戻す" : "非表示にする", () => adminHideFeedPost(adminPin, post.id, !post.hidden)))
+
+      post.comments.forEach((c) => {
+        const el = document.createElement("div")
+        el.className = "comment admin-comment" + (c.parent_id ? " reply" : "") + (c.hidden ? " is-hidden" : "")
+        const cm = document.createElement("p")
+        cm.className = "comment-meta"
+        cm.textContent = `${c.display_name}${c.hidden ? "・非表示中" : ""}`
+        el.appendChild(cm)
+        const ct = document.createElement("p")
+        ct.className = "comment-text"
+        ct.textContent = c.text
+        el.appendChild(ct)
+        el.appendChild(adminToggleButton(c.hidden ? "表示に戻す" : "非表示にする", () => adminHideComment(adminPin, c.id, !c.hidden)))
+        item.appendChild(el)
+      })
+      return item
+    }
+
+    // 起動(交流タブは、受講生の読み込みが終わってから使う)
+    const studentReady = initStudentTab()
   </script>
 </body>
 </html>

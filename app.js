@@ -198,6 +198,13 @@ function apiErrorMessage(error) {
     empty_text: "内容を入力してください",
     text_too_long: `${MAX_TEXT_LENGTH}文字以内で入力してください`,
     own_post: "自分の投稿にはリアクションできません",
+    no_group: "まだ期(グループ)の設定がありません。運営にお知らせください",
+    not_open: `${formatMdWeekday(PROGRAM_START_DATE)}のオープン後に投稿できます`,
+    invalid_kind: "投稿の種類を選んでください",
+    invalid_photo: "写真はJPEG・PNG・WebPの画像を選んでください",
+    photo_too_large: "写真が大きすぎます。別の写真でお試しください",
+    comment_not_found: "このコメントは見つかりませんでした",
+    not_yours: "自分の投稿・コメントだけ削除できます",
     wrong_pin: "合言葉が違います",
     admin_pin_not_set: "管理者の合言葉がまだ設定されていません(Apps Scriptのスクリプトプロパティ ADMIN_PIN を設定してください)",
   }
@@ -247,4 +254,134 @@ function fireConfetti() {
   const colors = ["#ff8a5c", "#ffc93c", "#ff6f91", "#6bcb77", "#4d96ff"]
   confetti({ particleCount: 70, spread: 75, startVelocity: 38, origin: { y: 0.65 }, colors })
   confetti({ particleCount: 30, spread: 100, startVelocity: 25, origin: { y: 0.55 }, colors, scalar: 0.7 })
+}
+
+// ================= 交流の場(期ごとのグループ) =================
+
+// 投稿の種類(Code.gs の FEED_KINDS と合わせる)
+const FEED_KINDS = [
+  { kind: "好き", emoji: "💛", hint: "例: 最近ハマっているもの、好きな場所や時間" },
+  { kind: "気づき", emoji: "💡", hint: "例: 今日気づいたこと、やってみて感じたこと" },
+]
+const MAX_POST_LENGTH = 500
+const MAX_COMMENT_LENGTH = 200
+const COMMUNITY_DRAFT_KEY = "jmc_community_draft"
+
+// 写真は、送る前にスマホの中で小さくする(長辺1280px・JPEG)。
+// サーバー側の上限(1.5MB)に収まるよう、画質を少しずつ下げて調整する。
+const PHOTO_MAX_EDGE = 1280
+const PHOTO_MAX_BYTES = 1200000
+
+// "2026-11-12T05:03:00.000Z" → "11/12(木) 14:03"(日本時間)
+function formatDateTime(iso) {
+  const d = new Date(iso)
+  if (isNaN(d)) return ""
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+  const ymd = jst.toISOString().slice(0, 10)
+  return `${formatMdWeekday(ymd)} ${String(jst.getUTCHours()).padStart(2, "0")}:${String(jst.getUTCMinutes()).padStart(2, "0")}`
+}
+
+function loadCommunityDraft() {
+  try {
+    return JSON.parse(localStorage.getItem(COMMUNITY_DRAFT_KEY) || "null")
+  } catch {
+    return null
+  }
+}
+
+function saveCommunityDraft(draft) {
+  try {
+    if (draft && draft.text) localStorage.setItem(COMMUNITY_DRAFT_KEY, JSON.stringify(draft))
+    else localStorage.removeItem(COMMUNITY_DRAFT_KEY)
+  } catch {
+    // 無視
+  }
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve(img)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error("写真を読み込めませんでした。別の写真でお試しください"))
+    }
+    img.src = url
+  })
+}
+
+// 選んだ写真を縮小して、送信用の文字列(base64)と、画面に出す用のURLを返す
+async function compressPhoto(file) {
+  if (!file.type.startsWith("image/")) throw new Error(apiErrorMessage("invalid_photo"))
+  const img = await loadImageFromFile(file)
+  const scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight))
+  const canvas = document.createElement("canvas")
+  canvas.width = Math.max(1, Math.round(img.naturalWidth * scale))
+  canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
+  const ctx = canvas.getContext("2d")
+  ctx.fillStyle = "#fff" // 透明な部分は白にする(JPEGには透明がないため)
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+  let quality = 0.85
+  let dataUrl = canvas.toDataURL("image/jpeg", quality)
+  while (dataUrl.length * 0.75 > PHOTO_MAX_BYTES && quality > 0.4) {
+    quality -= 0.1
+    dataUrl = canvas.toDataURL("image/jpeg", quality)
+  }
+  if (dataUrl.length * 0.75 > PHOTO_MAX_BYTES) throw new Error(apiErrorMessage("photo_too_large"))
+  return { base64: dataUrl.split(",")[1], mime: "image/jpeg", previewUrl: dataUrl }
+}
+
+async function fetchGroupFeed(studentId) {
+  return apiGet({ action: "groupFeed", id: studentId })
+}
+
+async function createFeedPost(studentId, kind, text, photo) {
+  const body = { action: "createFeedPost", student_id: studentId, kind, text }
+  if (photo) {
+    body.photo_base64 = photo.base64
+    body.photo_mime = photo.mime
+  }
+  return apiPost(body)
+}
+
+async function deleteFeedPost(studentId, postId) {
+  return apiPost({ action: "deleteFeedPost", student_id: studentId, post_id: postId })
+}
+
+async function addComment(studentId, postId, parentId, text) {
+  return apiPost({ action: "addComment", student_id: studentId, post_id: postId, parent_id: parentId || "", text })
+}
+
+async function deleteComment(studentId, commentId) {
+  return apiPost({ action: "deleteComment", student_id: studentId, comment_id: commentId })
+}
+
+async function reactToFeedPost(studentId, postId, type) {
+  return apiPost({ action: "reactFeed", student_id: studentId, post_id: postId, type })
+}
+
+async function adminFeed(pin) {
+  return apiPost({ action: "adminFeed", pin })
+}
+
+async function adminHideFeedPost(pin, postId, hidden) {
+  return apiPost({ action: "hideFeedPost", pin, post_id: postId, hidden })
+}
+
+async function adminHideComment(pin, commentId, hidden) {
+  return apiPost({ action: "hideComment", pin, comment_id: commentId, hidden })
+}
+
+async function adminSetGroup(pin, displayName, group) {
+  return apiPost({ action: "setGroup", pin, display_name: displayName, group })
+}
+
+async function adminImportRoster(pin, text) {
+  return apiPost({ action: "importRoster", pin, text })
 }

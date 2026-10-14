@@ -21,6 +21,20 @@ const PROGRAM_START_DATE = "2026-11-01"
 const PROGRAM_LENGTH = 30
 
 const MAX_TEXT_LENGTH = 300
+
+// 交流の場(期ごとのグループ)
+const FEED_SHEET = "feed_posts"
+const COMMENTS_SHEET = "comments"
+const ROSTER_SHEET = "roster"
+const FEED_HEADERS = ["id", "student_id", "display_name", "group", "kind", "text", "photo_id", "reactions", "hidden", "created_at"]
+const COMMENT_HEADERS = ["id", "post_id", "parent_id", "student_id", "display_name", "group", "text", "hidden", "created_at"]
+const ROSTER_HEADERS = ["display_name", "group"]
+const FEED_KINDS = ["好き", "気づき"]
+const MAX_POST_LENGTH = 500
+const MAX_COMMENT_LENGTH = 200
+const MAX_PHOTO_BYTES = 1500000
+const PHOTO_FOLDER_NAME = "自分満たし写真"
+const GROUP_FEED_LIMIT = 100
 // リアクションの種類(画面側の app.js の REACTIONS と合わせる)
 const REACTION_TYPES = ["like", "understand", "energy", "try"]
 const FEED_LIMIT = 200
@@ -30,6 +44,7 @@ function doGet(e) {
     const action = e.parameter.action || "get"
     if (action === "get") return respond(getStudentById(e.parameter.id) || { error: "not_found" })
     if (action === "feed") return respond(getFeed(e.parameter.id))
+    if (action === "groupFeed") return respond(getGroupFeed(e.parameter.id))
     return respond({ error: "unknown_action" })
   } catch (err) {
     return respond({ error: String(err) })
@@ -51,6 +66,26 @@ function doPost(e) {
           return respond(deletePost(body.student_id, body.date))
         case "react":
           return respond(reactToPost(body.student_id, body.post_id, body.type))
+        case "createFeedPost":
+          return respond(createFeedPost(body.student_id, body.kind, body.text, body.photo_base64, body.photo_mime))
+        case "deleteFeedPost":
+          return respond(deleteFeedPost(body.student_id, body.post_id))
+        case "addComment":
+          return respond(addComment(body.student_id, body.post_id, body.parent_id, body.text))
+        case "deleteComment":
+          return respond(deleteComment(body.student_id, body.comment_id))
+        case "reactFeed":
+          return respond(reactToFeedPost(body.student_id, body.post_id, body.type))
+        case "adminFeed":
+          return respond(adminFeed(body.pin))
+        case "hideFeedPost":
+          return respond(hideFeedPost(body.pin, body.post_id, body.hidden))
+        case "hideComment":
+          return respond(hideComment(body.pin, body.comment_id, body.hidden))
+        case "setGroup":
+          return respond(setGroup(body.pin, body.display_name, body.group))
+        case "importRoster":
+          return respond(importRoster(body.pin, body.text))
         case "adminList":
           return respond(adminList(body.pin))
         case "hidePost":
@@ -375,7 +410,12 @@ function adminList(pin) {
   const authError = checkAdmin(pin)
   if (authError) return { error: authError }
 
-  const students = readTable(studentsSheet(), STUDENT_HEADERS).map((s) => formatStudent(s, false))
+  const groups = rosterMap()
+  const students = readTable(studentsSheet(), STUDENT_HEADERS).map((s) => {
+    const student = formatStudent(s, false)
+    student.group = groups[String(s.display_name).trim().toLowerCase()] || ""
+    return student
+  })
   const posts = readTable(postsSheet(), POST_HEADERS)
     .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
     .map((p) => {
@@ -401,4 +441,343 @@ function hidePost(pin, postId, hidden) {
   if (!post) return { error: "post_not_found" }
   setCell(sheet, POST_HEADERS, post._row, "hidden", hidden ? "1" : "")
   return { post_id: post.id, hidden: !!hidden }
+}
+
+// ================= 交流の場(期ごとのグループ) =================
+// 投稿・コメント・返信はすべて匿名。見られるのは、自分と同じ期のメンバーの投稿だけ。
+// 期は、スプレッドシートの roster シート(呼び名 → 期)から、受講生の名前で判定する。
+
+function feedSheet() {
+  return getSheet(FEED_SHEET, FEED_HEADERS)
+}
+
+function commentsSheet() {
+  return getSheet(COMMENTS_SHEET, COMMENT_HEADERS)
+}
+
+function rosterSheet() {
+  return getSheet(ROSTER_SHEET, ROSTER_HEADERS)
+}
+
+// { "呼び名(小文字)": "3期" }
+function rosterMap() {
+  const map = {}
+  readTable(rosterSheet(), ROSTER_HEADERS).forEach((r) => {
+    const name = String(r.display_name).trim().toLowerCase()
+    if (name) map[name] = String(r.group).trim()
+  })
+  return map
+}
+
+function groupOf(displayName) {
+  return rosterMap()[String(displayName || "").trim().toLowerCase()] || ""
+}
+
+function photoUrl(photoId) {
+  if (!photoId) return ""
+  const base = PropertiesService.getScriptProperties().getProperty("PHOTO_URL_BASE")
+  return base ? base + photoId : "https://drive.google.com/thumbnail?id=" + photoId + "&sz=w1000"
+}
+
+// 写真の保存先フォルダ(最初の1回だけ作って、IDをスクリプトプロパティに覚える)
+function photoFolder() {
+  const props = PropertiesService.getScriptProperties()
+  const saved = props.getProperty("PHOTO_FOLDER_ID")
+  if (saved) {
+    try {
+      return DriveApp.getFolderById(saved)
+    } catch (err) {
+      // 消されていたら作り直す
+    }
+  }
+  const folder = DriveApp.createFolder(PHOTO_FOLDER_NAME)
+  props.setProperty("PHOTO_FOLDER_ID", folder.getId())
+  return folder
+}
+
+function savePhoto(base64, mime) {
+  if (["image/jpeg", "image/png", "image/webp"].indexOf(mime) === -1) return { error: "invalid_photo" }
+  const bytes = Utilities.base64Decode(String(base64))
+  if (bytes.length > MAX_PHOTO_BYTES) return { error: "photo_too_large" }
+  const ext = mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg"
+  const file = photoFolder().createFile(Utilities.newBlob(bytes, mime, Utilities.getUuid() + "." + ext))
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW)
+  return { id: file.getId() }
+}
+
+function trashPhoto(photoId) {
+  if (!photoId) return
+  try {
+    DriveApp.getFileById(photoId).setTrashed(true)
+  } catch (err) {
+    // すでに無ければ何もしない
+  }
+}
+
+// 写真を保存する権限の確認用。Apps Script のエディタでこの関数を1回「実行」して、権限を許可する。
+function authorizeDrive() {
+  photoFolder()
+}
+
+// 同じ期のメンバーだけが見られる、という条件を確認する。問題なければ { student, group } を返す。
+function requireGroupMember(studentId) {
+  const student = findStudentById(studentId)
+  if (!student) return { error: "student_not_found" }
+  const group = groupOf(student.display_name)
+  if (!group) return { error: "no_group" }
+  return { student, group }
+}
+
+function createFeedPost(studentId, kind, rawText, photoBase64, photoMime) {
+  const member = requireGroupMember(studentId)
+  if (member.error) return member
+  if (todayStr() < PROGRAM_START_DATE) return { error: "not_open" }
+  if (FEED_KINDS.indexOf(kind) === -1) return { error: "invalid_kind" }
+
+  const text = String(rawText || "").trim()
+  if (!text) return { error: "empty_text" }
+  if (text.length > MAX_POST_LENGTH) return { error: "text_too_long" }
+
+  let photoId = ""
+  if (photoBase64) {
+    const saved = savePhoto(photoBase64, photoMime)
+    if (saved.error) return saved
+    photoId = saved.id
+  }
+
+  const id = Utilities.getUuid()
+  const now = new Date().toISOString()
+  appendTextRow(feedSheet(), [id, member.student.id, member.student.display_name, member.group, kind, text, photoId, "{}", "", now])
+  return { post_id: id }
+}
+
+function deleteFeedPost(studentId, postId) {
+  const student = findStudentById(studentId)
+  if (!student) return { error: "student_not_found" }
+  const sheet = feedSheet()
+  const post = readTable(sheet, FEED_HEADERS).find((p) => String(p.id) === String(postId))
+  if (!post) return { error: "post_not_found" }
+  if (String(post.student_id) !== String(student.id)) return { error: "not_yours" }
+
+  // この投稿へのコメントと返信も一緒に消す(下の行から消して、行番号がずれないようにする)
+  const csheet = commentsSheet()
+  readTable(csheet, COMMENT_HEADERS)
+    .filter((c) => String(c.post_id) === String(postId))
+    .sort((a, b) => b._row - a._row)
+    .forEach((c) => csheet.deleteRow(c._row))
+  sheet.deleteRow(post._row)
+  trashPhoto(post.photo_id)
+  return { post_id: postId }
+}
+
+function addComment(studentId, postId, parentId, rawText) {
+  const member = requireGroupMember(studentId)
+  if (member.error) return member
+
+  const text = String(rawText || "").trim()
+  if (!text) return { error: "empty_text" }
+  if (text.length > MAX_COMMENT_LENGTH) return { error: "text_too_long" }
+
+  const post = readTable(feedSheet(), FEED_HEADERS).find((p) => String(p.id) === String(postId))
+  if (!post || String(post.hidden) === "1") return { error: "post_not_found" }
+  if (String(post.group) !== member.group) return { error: "no_group" }
+
+  const comments = readTable(commentsSheet(), COMMENT_HEADERS)
+  if (parentId) {
+    // 返信は1段だけ(コメントへの返信)。返信への返信は、元のコメントにつなげる。
+    const parent = comments.find((c) => String(c.id) === String(parentId) && String(c.post_id) === String(postId))
+    if (!parent || String(parent.hidden) === "1") return { error: "comment_not_found" }
+    if (parent.parent_id) parentId = parent.parent_id
+  }
+
+  const id = Utilities.getUuid()
+  const now = new Date().toISOString()
+  appendTextRow(commentsSheet(), [id, postId, parentId || "", member.student.id, member.student.display_name, member.group, text, "", now])
+  return { comment_id: id }
+}
+
+function deleteComment(studentId, commentId) {
+  const student = findStudentById(studentId)
+  if (!student) return { error: "student_not_found" }
+  const sheet = commentsSheet()
+  const all = readTable(sheet, COMMENT_HEADERS)
+  const comment = all.find((c) => String(c.id) === String(commentId))
+  if (!comment) return { error: "comment_not_found" }
+  if (String(comment.student_id) !== String(student.id)) return { error: "not_yours" }
+
+  // 自分のコメントと、それにつながる返信を消す
+  all
+    .filter((c) => String(c.id) === String(commentId) || String(c.parent_id) === String(commentId))
+    .sort((a, b) => b._row - a._row)
+    .forEach((c) => sheet.deleteRow(c._row))
+  return { comment_id: commentId }
+}
+
+function reactToFeedPost(studentId, postId, type) {
+  const member = requireGroupMember(studentId)
+  if (member.error) return member
+  if (REACTION_TYPES.indexOf(type) === -1) return { error: "invalid_reaction" }
+
+  const sheet = feedSheet()
+  const post = readTable(sheet, FEED_HEADERS).find((p) => String(p.id) === String(postId))
+  if (!post || String(post.hidden) === "1") return { error: "post_not_found" }
+  if (String(post.group) !== member.group) return { error: "no_group" }
+  if (String(post.student_id) === String(member.student.id)) return { error: "own_post" }
+
+  const reactions = parseReactions(post.reactions)
+  const list = Array.isArray(reactions[type]) ? reactions[type] : []
+  const sid = String(member.student.id)
+  const idx = list.indexOf(sid)
+  if (idx >= 0) list.splice(idx, 1)
+  else list.push(sid)
+  reactions[type] = list
+  setCell(sheet, FEED_HEADERS, post._row, "reactions", JSON.stringify(reactions))
+  return { post_id: post.id, counts: countsOf(reactions), mine: mineOf(reactions, sid) }
+}
+
+// 自分の期の投稿とコメントを返す。投稿者の名前・IDは返さない(匿名)。
+function getGroupFeed(studentId) {
+  const student = findStudentById(studentId)
+  if (!student) return { error: "not_found" }
+  const group = groupOf(student.display_name)
+  if (!group) return { group: "", posts: [], comments: {} }
+
+  const sid = String(student.id)
+  const posts = readTable(feedSheet(), FEED_HEADERS)
+    .filter((p) => String(p.group) === group && String(p.hidden) !== "1")
+    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
+    .slice(0, GROUP_FEED_LIMIT)
+  const authors = {}
+  posts.forEach((p) => (authors[String(p.id)] = String(p.student_id)))
+
+  const comments = {}
+  readTable(commentsSheet(), COMMENT_HEADERS)
+    .filter((c) => authors[String(c.post_id)] !== undefined && String(c.hidden) !== "1")
+    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? -1 : 1))
+    .forEach((c) => {
+      const key = String(c.post_id)
+      if (!comments[key]) comments[key] = []
+      comments[key].push({
+        id: c.id,
+        parent_id: c.parent_id ? String(c.parent_id) : "",
+        text: String(c.text),
+        created_at: toIsoStr(c.created_at),
+        is_mine: String(c.student_id) === sid,
+        is_author: String(c.student_id) === authors[key],
+      })
+    })
+
+  return {
+    group,
+    posts: posts.map((p) => {
+      const reactions = parseReactions(p.reactions)
+      return {
+        id: p.id,
+        kind: p.kind,
+        text: String(p.text),
+        photo_url: photoUrl(p.photo_id),
+        created_at: toIsoStr(p.created_at),
+        counts: countsOf(reactions),
+        mine: mineOf(reactions, sid),
+        is_mine: String(p.student_id) === sid,
+      }
+    }),
+    comments,
+  }
+}
+
+// ---------------- 交流の場: 管理者 ----------------
+
+function adminFeed(pin) {
+  const authError = checkAdmin(pin)
+  if (authError) return { error: authError }
+
+  const commentsByPost = {}
+  readTable(commentsSheet(), COMMENT_HEADERS)
+    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? -1 : 1))
+    .forEach((c) => {
+      const key = String(c.post_id)
+      if (!commentsByPost[key]) commentsByPost[key] = []
+      commentsByPost[key].push({
+        id: c.id,
+        parent_id: c.parent_id ? String(c.parent_id) : "",
+        display_name: c.display_name,
+        text: String(c.text),
+        hidden: String(c.hidden) === "1",
+      })
+    })
+
+  const posts = readTable(feedSheet(), FEED_HEADERS)
+    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
+    .map((p) => ({
+      id: p.id,
+      group: p.group,
+      display_name: p.display_name,
+      kind: p.kind,
+      text: String(p.text),
+      photo_url: photoUrl(p.photo_id),
+      created_at: toIsoStr(p.created_at),
+      counts: countsOf(parseReactions(p.reactions)),
+      hidden: String(p.hidden) === "1",
+      comments: commentsByPost[String(p.id)] || [],
+    }))
+
+  const roster = readTable(rosterSheet(), ROSTER_HEADERS).map((r) => ({ display_name: r.display_name, group: String(r.group) }))
+  return { posts, roster }
+}
+
+function hideFeedPost(pin, postId, hidden) {
+  const authError = checkAdmin(pin)
+  if (authError) return { error: authError }
+  const sheet = feedSheet()
+  const post = readTable(sheet, FEED_HEADERS).find((p) => String(p.id) === String(postId))
+  if (!post) return { error: "post_not_found" }
+  setCell(sheet, FEED_HEADERS, post._row, "hidden", hidden ? "1" : "")
+  return { post_id: post.id, hidden: !!hidden }
+}
+
+function hideComment(pin, commentId, hidden) {
+  const authError = checkAdmin(pin)
+  if (authError) return { error: authError }
+  const sheet = commentsSheet()
+  const comment = readTable(sheet, COMMENT_HEADERS).find((c) => String(c.id) === String(commentId))
+  if (!comment) return { error: "comment_not_found" }
+  setCell(sheet, COMMENT_HEADERS, comment._row, "hidden", hidden ? "1" : "")
+  return { comment_id: comment.id, hidden: !!hidden }
+}
+
+// 名簿(呼び名 → 期)に1人ぶん登録する。すでにあれば上書き。期を空にすると、グループなしになる。
+function upsertRoster(name, group) {
+  const sheet = rosterSheet()
+  const key = String(name).trim().toLowerCase()
+  const existing = readTable(sheet, ROSTER_HEADERS).find((r) => String(r.display_name).trim().toLowerCase() === key)
+  if (existing) setCell(sheet, ROSTER_HEADERS, existing._row, "group", group)
+  else appendTextRow(sheet, [String(name).trim(), group])
+}
+
+function setGroup(pin, displayName, group) {
+  const authError = checkAdmin(pin)
+  if (authError) return { error: authError }
+  const name = String(displayName || "").trim()
+  if (!name) return { error: "名前を入力してください" }
+  upsertRoster(name, String(group || "").trim().slice(0, 20))
+  return { display_name: name, group: String(group || "").trim() }
+}
+
+// 「呼び名,期」を1行ずつ貼り付けて、まとめて登録する(区切りは、カンマ・タブ・読点)。
+function importRoster(pin, text) {
+  const authError = checkAdmin(pin)
+  if (authError) return { error: authError }
+  let count = 0
+  String(text || "")
+    .split(/\r?\n/)
+    .forEach((line) => {
+      const parts = line.split(/[,\t、，]/).map((s) => s.trim())
+      if (parts.length < 2 || !parts[0] || !parts[1]) return
+      // 見出しの行(「名前,期」など)は飛ばす
+      if (["名前", "お名前", "呼び名", "display_name", "name"].indexOf(parts[0].toLowerCase()) !== -1) return
+      upsertRoster(parts[0], parts[1].slice(0, 20))
+      count++
+    })
+  return { imported: count }
 }

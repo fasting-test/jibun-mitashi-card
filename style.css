@@ -801,3 +801,257 @@ textarea:focus {
 .btn-link[hidden] {
   display: none;
 }
+
+/* ================= 交流タブ ================= */
+
+.lead.compact {
+  margin-bottom: 24px;
+}
+
+.lead.compact h1 {
+  font-size: 21px;
+}
+
+.gate-btn {
+  margin-top: 16px;
+}
+
+.compose {
+  margin-bottom: 8px;
+}
+
+.kind-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.kind-btn {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kind-btn.active {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  color: var(--background);
+  box-shadow: var(--glow-shadow);
+}
+
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -4px 0 14px;
+}
+
+.photo-pick {
+  display: inline-block;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.photo-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 260px;
+  margin: 0 auto 14px;
+  border-radius: 12px;
+  box-shadow: var(--glow-shadow);
+}
+
+.btn-link.inline {
+  display: inline-block;
+  margin: 0;
+  padding: 4px 6px;
+}
+
+.btn-link.danger {
+  color: #ff9f9f;
+}
+
+.post-photo-link {
+  display: block;
+  margin-top: 10px;
+}
+
+.post-photo {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+/* --- コメント --- */
+
+.comments {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gridline);
+}
+
+.comments-head {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.comment {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 4px 12px 12px 4px;
+  border-left: 2px solid var(--gridline);
+  background: var(--surface-2);
+}
+
+.comment.reply {
+  margin-left: 18px;
+}
+
+.comment.is-mine {
+  border-left-color: var(--accent);
+}
+
+.comment-meta {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.comment-text {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--foreground);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.comment-form {
+  margin-top: 10px;
+}
+
+.reply-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.comment-row {
+  display: flex;
+  gap: 8px;
+}
+
+.comment-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  font-size: 14px;
+  box-shadow: none;
+}
+
+.comment-send {
+  flex: none;
+  border: none;
+  border-radius: 12px;
+  padding: 0 16px;
+  background: var(--gradient-primary);
+  color: var(--background);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.comment-send:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.comment-form .error {
+  margin-top: 8px;
+  text-align: left;
+}
+
+/* --- 管理者: 期の設定 --- */
+
+.admin-roster label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.admin-roster textarea {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.admin-small-btn {
+  width: auto;
+  padding: 10px 18px;
+  font-size: 14px;
+}
+
+.roster-one {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.roster-one input[type="text"] {
+  flex: 1 1 140px;
+  min-width: 0;
+  font-size: 14px;
+  padding: 10px 14px;
+}
+
+.admin-ok {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.admin-table-wrap td.muted {
+  color: var(--text-muted);
+}
+
+.admin-comment {
+  margin-top: 10px;
+}
+
+.admin-comment.is-hidden {
+  opacity: 0.55;
+}
+
+/* hidden 属性は、表示方法を個別に指定した要素(inline-block など)でも、必ず隠す */
+[hidden] {
+  display: none !important;
+}
