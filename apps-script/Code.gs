@@ -426,7 +426,7 @@ function adminList(pin) {
   const authError = checkAdmin(pin)
   if (authError) return { error: authError }
 
-  const groups = rosterMap()
+  const roster = rosterEntries()
   const records = readTable(recordsSheet(), RECORD_HEADERS)
   const stats = {} // 受講生ID → { count, days }
   records.forEach((r) => {
@@ -438,7 +438,7 @@ function adminList(pin) {
   const students = readTable(studentsSheet(), STUDENT_HEADERS).map((s) => {
     const student = formatStudent(s, false)
     const st = stats[String(s.id)] || { count: 0, days: {} }
-    student.group = groups[String(s.display_name).trim().toLowerCase()] || ""
+    student.group = resolveGroup(s.display_name, roster)
     student.record_count = st.count
     student.record_days = Object.keys(st.days).length
     return student
@@ -488,18 +488,46 @@ function rosterSheet() {
   return getSheet(ROSTER_SHEET, ROSTER_HEADERS)
 }
 
-// { "呼び名(小文字)": "3期" }
-function rosterMap() {
-  const map = {}
-  readTable(rosterSheet(), ROSTER_HEADERS).forEach((r) => {
-    const name = String(r.display_name).trim().toLowerCase()
-    if (name) map[name] = String(r.group).trim()
+// 名前を「ほぼ一致」で比べるための整形。
+// 全角/半角・大文字/小文字・空白・記号(〜 ♡ ★ など)・頭の「◯期」・末尾の「ちゃん/さん/くん/さま」を無視する。
+function normalizeName(value) {
+  let s = String(value || "")
+  if (s.normalize) s = s.normalize("NFKC")
+  s = s.toLowerCase().replace(/[\s　]+/g, "")
+  s = s.replace(/^[0-9０-９]+期/, "")
+  s = s.replace(/[〜~ー\-_・･♡♥☆★!！?？.。、,，()（）「」『』\[\]【】*＊+＋]/g, "")
+  const stripped = s.replace(/(ちゃん|さん|くん|さま|様|氏)$/, "")
+  if (stripped.length >= 2) s = stripped
+  return s
+}
+
+// 名簿の行の一覧 [{ name: 整形した呼び名, group: "3期" }]
+function rosterEntries() {
+  return readTable(rosterSheet(), ROSTER_HEADERS)
+    .map((r) => ({ name: normalizeName(r.display_name), group: String(r.group).trim() }))
+    .filter((r) => r.name)
+}
+
+// 整形した名前が同じなら一致。違っても、どちらかがもう一方の先頭と一致していれば(2文字以上)同じ人とみなす。
+// 候補が複数あるときは、いちばん長く一致したものを採る。
+function resolveGroup(displayName, entries) {
+  const name = normalizeName(displayName)
+  if (!name) return ""
+  const exact = entries.find((e) => e.name === name)
+  if (exact) return exact.group
+  let best = null
+  entries.forEach((e) => {
+    const short = e.name.length <= name.length ? e.name : name
+    const long = e.name.length <= name.length ? name : e.name
+    if (short.length >= 2 && long.indexOf(short) === 0) {
+      if (!best || short.length > best.len) best = { len: short.length, group: e.group }
+    }
   })
-  return map
+  return best ? best.group : ""
 }
 
 function groupOf(displayName) {
-  return rosterMap()[String(displayName || "").trim().toLowerCase()] || ""
+  return resolveGroup(displayName, rosterEntries())
 }
 
 function photoUrl(photoId) {
@@ -793,19 +821,30 @@ function setGroup(pin, displayName, group) {
   return { display_name: name, group: String(group || "").trim() }
 }
 
-// 「呼び名,期」を1行ずつ貼り付けて、まとめて登録する(区切りは、カンマ・タブ・読点)。
+// まとめて登録する。次の2つの書き方に対応する。
+//   A. 1行に「呼び名,期」(区切りは、カンマ・タブ・読点)
+//   B. 「3期」のような行を書いてから、その下に呼び名を1行ずつ並べる(次の「◯期」の行まで、その期になる)
 function importRoster(pin, text) {
   const authError = checkAdmin(pin)
   if (authError) return { error: authError }
   let count = 0
+  let currentGroup = ""
   String(text || "")
     .split(/\r?\n/)
-    .forEach((line) => {
+    .forEach((rawLine) => {
+      const line = rawLine.trim()
+      if (!line) return
+      if (/^[0-9０-９]+期$/.test(line)) {
+        currentGroup = line.normalize ? line.normalize("NFKC") : line
+        return
+      }
       const parts = line.split(/[,\t、，]/).map((s) => s.trim())
-      if (parts.length < 2 || !parts[0] || !parts[1]) return
       // 見出しの行(「名前,期」など)は飛ばす
       if (["名前", "お名前", "呼び名", "display_name", "name"].indexOf(parts[0].toLowerCase()) !== -1) return
-      upsertRoster(parts[0], parts[1].slice(0, 20))
+      const name = parts[0]
+      const group = parts.length >= 2 && parts[1] ? parts[1] : currentGroup
+      if (!name || !group) return
+      upsertRoster(name, group.slice(0, 20))
       count++
     })
   return { imported: count }
