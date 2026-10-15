@@ -1255,3 +1255,18 @@ textarea:focus {
   border: 1px solid var(--border);
   box-shadow: none;
 }
+
+/* --- デモ環境のお知らせ --- */
+
+.demo-banner {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--accent);
+  background: var(--surface-1);
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.6;
+  text-align: center;
+}

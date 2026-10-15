@@ -6,8 +6,11 @@ const PROGRAM_START_DATE = "2026-11-01"
 const PROGRAM_LENGTH = 30
 const MAX_TEXT_LENGTH = 300
 const MAX_FEELING_LENGTH = 300
-const STUDENT_ID_KEY = "jmc_student_id"
-const RECORD_DRAFT_KEY = "jmc_record_draft"
+// デモ環境では、端末に覚える内容(ログイン中の受講生など)を本番と分ける
+const IS_DEMO = !!(window.APP_CONFIG && window.APP_CONFIG.demo)
+const STORAGE_PREFIX = IS_DEMO ? "jmc_demo_" : "jmc_"
+const STUDENT_ID_KEY = STORAGE_PREFIX + "student_id"
+const RECORD_DRAFT_KEY = STORAGE_PREFIX + "record_draft"
 
 // 五感と気持ちの記録は、11/12のプレ講座のあとから使えるようにする
 const SENSES_START_DATE = "2026-11-12"
@@ -41,9 +44,11 @@ function isLocalhost() {
 
 // 動作確認用: URLの末尾に ?today=2026-11-05 を付けると、画面上の「今日」をその日にして見られる。
 // (画面の見え方が変わるだけ。書き込みの日付の判定はサーバー側で行うので、これで不正はできない)
+// デモ環境では、何も付けなくても demoToday の日付で動く。
 function devTodayOverride() {
   const v = new URLSearchParams(location.search).get("today")
-  return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null
+  if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+  return IS_DEMO ? window.APP_CONFIG.demoToday : null
 }
 
 function todayStr() {
@@ -128,6 +133,7 @@ function clearStudentIdFromLocalStorage() {
 const SHARED_NAME_KEY = "skipf_shared_display_name"
 
 function getSharedDisplayName() {
+  if (IS_DEMO) return null
   try {
     return localStorage.getItem(SHARED_NAME_KEY)
   } catch {
@@ -136,6 +142,7 @@ function getSharedDisplayName() {
 }
 
 function setSharedDisplayName(name) {
+  if (IS_DEMO) return
   try {
     localStorage.setItem(SHARED_NAME_KEY, name)
   } catch {
@@ -144,6 +151,7 @@ function setSharedDisplayName(name) {
 }
 
 function clearSharedDisplayName() {
+  if (IS_DEMO) return
   try {
     localStorage.removeItem(SHARED_NAME_KEY)
   } catch {
@@ -283,7 +291,7 @@ const FEED_KINDS = [
 ]
 const MAX_POST_LENGTH = 500
 const MAX_COMMENT_LENGTH = 200
-const COMMUNITY_DRAFT_KEY = "jmc_community_draft"
+const COMMUNITY_DRAFT_KEY = STORAGE_PREFIX + "community_draft"
 
 // 写真は、送る前にスマホの中で小さくする(長辺1280px・JPEG)。
 // サーバー側の上限(1.5MB)に収まるよう、画質を少しずつ下げて調整する。

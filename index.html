@@ -7,10 +7,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
   <main id="main-el">
+    <!-- デモ環境のときだけ出す(?demo=1) -->
+    <p class="demo-banner" id="demo-banner" hidden>デモ環境です。本番とは別のデータなので、自由に試せます(日付は11/14として動きます)。</p>
+
     <!-- ツールの切り替え(31日間チャレンジ ⇔ 自分満たし)。チャレンジシート側にも同じ並びの切り替えがある -->
     <nav class="site-switch" aria-label="ツールの切り替え">
       <a class="site-switch-item" href="https://fasting-test.github.io/challenge-stamp-card/">チャレンジシート</a>
@@ -267,14 +270,15 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-  <script src="config.js?v=1"></script>
-  <script src="app.js?v=5"></script>
+  <script src="config.js?v=2"></script>
+  <script src="app.js?v=6"></script>
   <script>
-    const REGISTER_DRAFT_KEY = "jmc_register_draft"
-    const ADMIN_PIN_KEY = "jmc_admin_pin"
+    const REGISTER_DRAFT_KEY = STORAGE_PREFIX + "register_draft"
+    const ADMIN_PIN_KEY = STORAGE_PREFIX + "admin_pin"
     const FEED_PAGE_SIZE = 30
 
     const mainEl = document.getElementById("main-el")
+    document.getElementById("demo-banner").hidden = !IS_DEMO
     const tabs = {
       student: { btn: document.getElementById("tab-btn-student"), panel: document.getElementById("tab-panel-student") },
       community: { btn: document.getElementById("tab-btn-community"), panel: document.getElementById("tab-panel-community") },
