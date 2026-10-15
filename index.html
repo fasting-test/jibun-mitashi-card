@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=8" />
+  <link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
   <main id="main-el">
@@ -234,6 +234,10 @@
           <h2 class="admin-section-title">記録の管理</h2>
           <p class="admin-summary">不適切な記録は「非表示にする」を押すと、みんなの画面から消えます(本人の画面には、そのまま残ります)。</p>
           <div id="admin-posts"></div>
+
+          <h2 class="admin-section-title">期の確認待ち</h2>
+          <p class="admin-summary">名簿と完全に一致しなかった受講生です。候補を見て、期のボタンを押すと確定します(その受講生の入力した名前で、名簿に登録されます)。</p>
+          <div id="admin-pending"></div>
 
           <h2 class="admin-section-title">期(グループ)の設定</h2>
           <p class="admin-summary">交流タブは、同じ期のメンバーだけで見せ合います。受講生の「呼び名」と期を登録してください(呼び名は、受講生が入力する名前と、まったく同じにします)。</p>
@@ -912,7 +916,12 @@
         communityComments = data.comments || {}
         if (!communityGroup) {
           communityLoadedFor = null // 期が設定されたら、次に開いたときに読み直す
-          showCommunityGate("まだ期(グループ)の設定がありません。運営にお伝えください。設定されると、同じ期のメンバーの投稿が見られるようになります。", false)
+          showCommunityGate(
+            data.pending
+              ? "期(グループ)を確認しています。運営が確認したら、同じ期のメンバーの投稿が見られるようになります。「わたしの記録」は、そのまま使えます。"
+              : "まだ期(グループ)の設定がありません。運営にお伝えください。設定されると、同じ期のメンバーの投稿が見られるようになります。",
+            false
+          )
           return
         }
         communityLoadingEl.hidden = true
@@ -1339,8 +1348,8 @@
         pinInput.value = ""
         adminPinGateEl.hidden = true
         adminContentEl.hidden = false
-        renderAdmin(data)
         renderAdminCommunity(await adminFeed(adminPin))
+        renderAdmin(data)
       } catch (err) {
         pinErrorEl.textContent = err && err.message ? err.message : "エラーが発生しました"
         pinErrorEl.hidden = false
@@ -1357,8 +1366,8 @@
       adminErrorEl.hidden = true
       try {
         const [list, feed] = await Promise.all([adminList(adminPin), adminFeed(adminPin)])
-        renderAdmin(list)
         renderAdminCommunity(feed)
+        renderAdmin(list)
       } catch (err) {
         adminLoadingEl.hidden = true
         adminErrorEl.textContent = err && err.message ? err.message : "読み込めませんでした"
@@ -1399,7 +1408,7 @@
         const elapsed = Math.min(Math.max(dayOffsetFromStart(s.start_date) + 1, 0), PROGRAM_LENGTH)
         const tr = document.createElement("tr")
         tr.appendChild(cell(s.display_name))
-        tr.appendChild(cell(s.group || "未設定", s.group ? "" : "muted"))
+        tr.appendChild(cell(s.group || (s.group_candidate ? "確認待ち" : "未設定"), s.group ? "" : "muted"))
         tr.appendChild(cell(`${elapsed}日目`))
         tr.appendChild(cell(`${s.record_count}件・${s.record_days}日`, "count"))
         tr.appendChild(cell(formatUpdated(s.updated_at)))
@@ -1408,6 +1417,62 @@
 
       adminPostsEl.innerHTML = ""
       data.posts.forEach((p) => adminPostsEl.appendChild(buildAdminPost(p)))
+
+      renderAdminPending(data.students)
+    }
+
+    // ---- 管理者: 期の確認待ち ----
+
+    const adminPendingEl = document.getElementById("admin-pending")
+    let knownGroups = []
+
+    function renderAdminPending(students) {
+      const pending = students.filter((s) => !s.group)
+      adminPendingEl.innerHTML = ""
+      if (pending.length === 0) {
+        const p = document.createElement("p")
+        p.className = "feed-empty"
+        p.textContent = "確認待ちの受講生はいません"
+        adminPendingEl.appendChild(p)
+        return
+      }
+      const groups = knownGroups.length ? knownGroups : ["3期", "4期"]
+      pending.forEach((s) => {
+        const item = document.createElement("div")
+        item.className = "pending-item"
+        const name = document.createElement("p")
+        name.className = "pending-name"
+        name.textContent = s.display_name
+        item.appendChild(name)
+        const hint = document.createElement("p")
+        hint.className = "pending-hint"
+        hint.textContent = s.group_candidate
+          ? `候補: ${s.group_candidate}の「${s.group_candidate_name}」に似ています`
+          : "候補なし(名簿に似た名前がありません)"
+        item.appendChild(hint)
+        const row = document.createElement("div")
+        row.className = "pending-actions"
+        groups.forEach((group) => {
+          const btn = document.createElement("button")
+          btn.type = "button"
+          btn.className = "btn-primary admin-small-btn" + (group === s.group_candidate ? "" : " secondary")
+          btn.textContent = `${group}にする`
+          btn.addEventListener("click", async () => {
+            btn.disabled = true
+            try {
+              await adminSetGroup(adminPin, s.display_name, group)
+              showAdminContent()
+            } catch (err) {
+              adminErrorEl.textContent = err && err.message ? err.message : "登録できませんでした"
+              adminErrorEl.hidden = false
+              btn.disabled = false
+            }
+          })
+          row.appendChild(btn)
+        })
+        item.appendChild(row)
+        adminPendingEl.appendChild(item)
+      })
     }
 
     function buildAdminPost(p) {
@@ -1508,6 +1573,7 @@
       data.roster.forEach((r) => {
         if (r.group) groups[r.group] = (groups[r.group] || 0) + 1
       })
+      knownGroups = Object.keys(groups).sort()
       const parts = Object.keys(groups).sort().map((g) => `${g}: ${groups[g]}人`)
       rosterSummaryEl.textContent = parts.length ? `登録済み: ${parts.join(" / ")}` : "まだ誰も登録されていません"
 

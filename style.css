@@ -1218,3 +1218,40 @@ textarea:focus {
   gap: 8px;
   margin-top: 6px;
 }
+
+/* --- 管理者: 期の確認待ち --- */
+
+.pending-item {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 4px 14px 14px 4px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-1);
+  box-shadow: var(--glow-shadow);
+}
+
+.pending-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.pending-hint {
+  margin: 4px 0 10px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.pending-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-primary.secondary {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}

@@ -438,7 +438,10 @@ function adminList(pin) {
   const students = readTable(studentsSheet(), STUDENT_HEADERS).map((s) => {
     const student = formatStudent(s, false)
     const st = stats[String(s.id)] || { count: 0, days: {} }
-    student.group = resolveGroup(s.display_name, roster)
+    const info = resolveGroup(s.display_name, roster)
+    student.group = info.group
+    student.group_candidate = info.candidate
+    student.group_candidate_name = info.candidate_name
     student.record_count = st.count
     student.record_days = Object.keys(st.days).length
     return student
@@ -504,30 +507,32 @@ function normalizeName(value) {
 // 名簿の行の一覧 [{ name: 整形した呼び名, group: "3期" }]
 function rosterEntries() {
   return readTable(rosterSheet(), ROSTER_HEADERS)
-    .map((r) => ({ name: normalizeName(r.display_name), group: String(r.group).trim() }))
+    .map((r) => ({ name: normalizeName(r.display_name), raw: String(r.display_name).trim(), group: String(r.group).trim() }))
     .filter((r) => r.name)
 }
 
-// 整形した名前が同じなら一致。違っても、どちらかがもう一方の先頭と一致していれば(2文字以上)同じ人とみなす。
-// 候補が複数あるときは、いちばん長く一致したものを採る。
+// 期の判定。整形した名前が名簿と同じなら、その期で確定(group)。
+// 似ているだけ(どちらかがもう一方の先頭と一致、2文字以上)のときは、自動では決めず、
+// 候補(candidate)として返す。管理者が確認して確定する。
 function resolveGroup(displayName, entries) {
   const name = normalizeName(displayName)
-  if (!name) return ""
+  if (!name) return { group: "", candidate: "", candidate_name: "" }
   const exact = entries.find((e) => e.name === name)
-  if (exact) return exact.group
+  if (exact) return { group: exact.group, candidate: "", candidate_name: "" }
   let best = null
   entries.forEach((e) => {
     const short = e.name.length <= name.length ? e.name : name
     const long = e.name.length <= name.length ? name : e.name
     if (short.length >= 2 && long.indexOf(short) === 0) {
-      if (!best || short.length > best.len) best = { len: short.length, group: e.group }
+      if (!best || short.length > best.len) best = { len: short.length, group: e.group, name: e.raw }
     }
   })
-  return best ? best.group : ""
+  return { group: "", candidate: best ? best.group : "", candidate_name: best ? best.name : "" }
 }
 
+// 確定した期だけを返す(確認待ちは "")
 function groupOf(displayName) {
-  return resolveGroup(displayName, rosterEntries())
+  return resolveGroup(displayName, rosterEntries()).group
 }
 
 function photoUrl(photoId) {
@@ -696,8 +701,10 @@ function reactToFeedPost(studentId, postId, type) {
 function getGroupFeed(studentId) {
   const student = findStudentById(studentId)
   if (!student) return { error: "not_found" }
-  const group = groupOf(student.display_name)
-  if (!group) return { group: "", posts: [], comments: {} }
+  const info = resolveGroup(student.display_name, rosterEntries())
+  const group = info.group
+  // 確認待ち(名簿に似た名前はあるが確定していない)かどうかも伝える
+  if (!group) return { group: "", pending: !!info.candidate, posts: [], comments: {} }
 
   const sid = String(student.id)
   const posts = readTable(feedSheet(), FEED_HEADERS)
