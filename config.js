@@ -9,7 +9,7 @@
   const isLocal = ["localhost", "127.0.0.1"].includes(location.hostname)
   const isDemo = new URLSearchParams(location.search).get("demo") === "1"
   const PRODUCTION_URL = "https://script.google.com/macros/s/AKfycbxU3fFSNOTUzJiws6Gjbq8qd9cTuRBeMNF_cEIf9OH5agRI_GL_F4b-8e2i7jpKgLdCzA/exec"
-  const DEMO_URL = "https://script.google.com/macros/s/xxxx-demo/exec"
+  const DEMO_URL = "https://script.google.com/macros/s/AKfycbz2lPxAeW8nCDu_8jNQMJ5MGm7qLo1ZrwJpZnLul9x3qmBX6lIHH_Nu7XcyLnEgRdYB/exec"
   window.APP_CONFIG = {
     demo: isDemo,
     demoToday: "2026-11-14",
