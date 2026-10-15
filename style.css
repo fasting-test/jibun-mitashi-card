@@ -1055,3 +1055,166 @@ textarea:focus {
 [hidden] {
   display: none !important;
 }
+
+/* ================= わたし推し活(記録・五感・振り返り) ================= */
+
+.write-eyebrow {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.write-title {
+  font-family: var(--font-serif);
+  margin: 0 0 14px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.field-label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.check-row input {
+  width: 20px;
+  height: 20px;
+  accent-color: #d9b976;
+  cursor: pointer;
+}
+
+.sense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.sense-btn {
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sense-btn.active {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  color: var(--background);
+  box-shadow: var(--glow-shadow);
+}
+
+.date-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 14px;
+}
+
+.date-row label {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.date-row select {
+  flex: 1;
+  min-width: 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+/* --- わたしの記録 --- */
+
+.sense-summary {
+  margin: -8px 0 14px;
+  font-size: 12.5px;
+  color: var(--accent);
+}
+
+.record-date {
+  margin: 16px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.record-item {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border-radius: 4px 14px 14px 4px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-1);
+  box-shadow: var(--glow-shadow);
+}
+
+.record-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--foreground);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sense-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.sense-chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.record-feeling {
+  margin: 8px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--gridline);
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.record-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}

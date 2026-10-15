@@ -1,4 +1,4 @@
-// 自分満たしツール — Googleスプレッドシートをデータベース代わりに使うAPI
+// わたし推し活(旧: 自分満たしカード) — Googleスプレッドシートをデータベース代わりに使うAPI
 //
 // 使い方:
 // 1. 新しいGoogleスプレッドシートを作成する(鬼トレとは別のファイル)
@@ -12,15 +12,19 @@
 // 5. デプロイ後に表示されるURL(.../exec で終わるもの)を config.js に貼る
 
 const STUDENTS_SHEET = "students"
-const POSTS_SHEET = "posts"
+// 毎日の記録(1日に何件でも)。スタンプ方式だった頃の posts シートは使わない
+const RECORDS_SHEET = "records"
 const STUDENT_HEADERS = ["id", "display_name", "start_date", "stamp_dates", "achieved_count", "created_at", "updated_at"]
-const POST_HEADERS = ["id", "student_id", "display_name", "date", "text", "reactions", "hidden", "created_at", "updated_at"]
+const RECORD_HEADERS = ["id", "student_id", "display_name", "date", "text", "senses", "feeling", "reactions", "hidden", "created_at", "updated_at"]
 
 // チャレンジ全体の開始日(固定)と日数。いつ登録しても、この日が1日目になる。
 const PROGRAM_START_DATE = "2026-11-01"
 const PROGRAM_LENGTH = 30
 
 const MAX_TEXT_LENGTH = 300
+const MAX_FEELING_LENGTH = 300
+// 五感(画面側の app.js の SENSES と合わせる)。記録には「smell,taste」のように保存する
+const SENSE_TYPES = ["smell", "touch", "taste", "hearing", "sight"]
 
 // 交流の場(期ごとのグループ)
 const FEED_SHEET = "feed_posts"
@@ -60,12 +64,12 @@ function doPost(e) {
       switch (body.action) {
         case "registerOrResume":
           return respond(registerOrResume(body.display_name))
-        case "savePost":
-          return respond(savePost(body.student_id, body.date, body.text))
-        case "deletePost":
-          return respond(deletePost(body.student_id, body.date))
+        case "saveRecord":
+          return respond(saveRecord(body.student_id, body.record_id, body.date, body.text, body.senses, body.feeling))
+        case "deleteRecord":
+          return respond(deleteRecord(body.student_id, body.record_id))
         case "react":
-          return respond(reactToPost(body.student_id, body.post_id, body.type))
+          return respond(reactToRecord(body.student_id, body.post_id, body.type))
         case "createFeedPost":
           return respond(createFeedPost(body.student_id, body.kind, body.text, body.photo_base64, body.photo_mime))
         case "deleteFeedPost":
@@ -89,7 +93,7 @@ function doPost(e) {
         case "adminList":
           return respond(adminList(body.pin))
         case "hidePost":
-          return respond(hidePost(body.pin, body.post_id, body.hidden))
+          return respond(hideRecord(body.pin, body.post_id, body.hidden))
         default:
           return respond({ error: "unknown_action" })
       }
@@ -124,8 +128,8 @@ function studentsSheet() {
   return getSheet(STUDENTS_SHEET, STUDENT_HEADERS)
 }
 
-function postsSheet() {
-  return getSheet(POSTS_SHEET, POST_HEADERS)
+function recordsSheet() {
+  return getSheet(RECORDS_SHEET, RECORD_HEADERS)
 }
 
 // 先頭が「=」の文字列は、スプレッドシートに計算式として実行されてしまい、「#ERROR!」に化ける
@@ -225,28 +229,48 @@ function findStudentByName(name) {
   return rows.find((r) => String(r.display_name).toLowerCase() === name.toLowerCase()) || null
 }
 
-// 本人の投稿(編集用に本文つき): { "2026-11-03": { id, text } }
-function myPostsOf(studentId) {
-  const result = {}
-  readTable(postsSheet(), POST_HEADERS).forEach((p) => {
-    if (String(p.student_id) === String(studentId)) {
-      result[toDateStr(p.date)] = { id: p.id, text: String(p.text) }
-    }
+function parseSenses(value) {
+  const list = Array.isArray(value) ? value : String(value || "").split(",")
+  const result = []
+  list.forEach((s) => {
+    const key = String(s).trim()
+    if (SENSE_TYPES.indexOf(key) !== -1 && result.indexOf(key) === -1) result.push(key)
   })
   return result
 }
 
-function formatStudent(obj, withPosts) {
+// 記録を新しい順に並べる(記録した日 → 書いた時刻)
+function byNewest(a, b) {
+  const da = toDateStr(a.date)
+  const db = toDateStr(b.date)
+  if (da !== db) return da < db ? 1 : -1
+  return toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1
+}
+
+// 本人の記録の一覧(振り返り用)
+function myRecordsOf(studentId) {
+  return readTable(recordsSheet(), RECORD_HEADERS)
+    .filter((r) => String(r.student_id) === String(studentId))
+    .sort(byNewest)
+    .map((r) => ({
+      id: r.id,
+      date: toDateStr(r.date),
+      text: String(r.text),
+      senses: parseSenses(r.senses),
+      feeling: String(r.feeling || ""),
+      created_at: toIsoStr(r.created_at),
+    }))
+}
+
+function formatStudent(obj, withRecords) {
   const student = {
     id: obj.id,
     display_name: obj.display_name,
     start_date: toDateStr(obj.start_date),
-    stamp_dates: parseDatesCell(obj.stamp_dates),
-    achieved_count: Number(obj.achieved_count || 0),
     created_at: toIsoStr(obj.created_at),
     updated_at: toIsoStr(obj.updated_at),
   }
-  if (withPosts) student.my_posts = myPostsOf(obj.id)
+  if (withRecords) student.my_records = myRecordsOf(obj.id)
   return student
 }
 
@@ -268,22 +292,14 @@ function registerOrResume(displayName) {
   return formatStudent(findStudentById(id), true)
 }
 
-function saveStampDates(student, dates) {
-  const sheet = studentsSheet()
-  dates.sort()
-  setCell(sheet, STUDENT_HEADERS, student._row, "stamp_dates", dates.join(","))
-  setCell(sheet, STUDENT_HEADERS, student._row, "achieved_count", dates.length)
-  setCell(sheet, STUDENT_HEADERS, student._row, "updated_at", new Date().toISOString())
+function touchStudent(student) {
+  setCell(studentsSheet(), STUDENT_HEADERS, student._row, "updated_at", new Date().toISOString())
 }
 
-// ---------------- 投稿(1日1つ。書く=スタンプを押す) ----------------
+// ---------------- 記録(1日に何件でも) ----------------
 
-function findPost(studentId, date) {
-  const rows = readTable(postsSheet(), POST_HEADERS)
-  return rows.find((p) => String(p.student_id) === String(studentId) && toDateStr(p.date) === date) || null
-}
-
-function savePost(studentId, dateStr, rawText) {
+// recordId があれば、自分の記録の書き直し。なければ新しい記録。
+function saveRecord(studentId, recordId, dateStr, rawText, rawSenses, rawFeeling) {
   const student = findStudentById(studentId)
   if (!student) return { error: "student_not_found" }
 
@@ -294,39 +310,37 @@ function savePost(studentId, dateStr, rawText) {
   const text = String(rawText || "").trim()
   if (!text) return { error: "empty_text" }
   if (text.length > MAX_TEXT_LENGTH) return { error: "text_too_long" }
+  const feeling = String(rawFeeling || "").trim()
+  if (feeling.length > MAX_FEELING_LENGTH) return { error: "text_too_long" }
+  const senses = parseSenses(rawSenses).join(",")
 
   const now = new Date().toISOString()
-  const sheet = postsSheet()
-  const existing = findPost(studentId, target)
-  if (existing) {
-    // 書き直し。リアクションはそのまま残す。
-    setCell(sheet, POST_HEADERS, existing._row, "text", text)
-    setCell(sheet, POST_HEADERS, existing._row, "updated_at", now)
+  const sheet = recordsSheet()
+  if (recordId) {
+    const record = readTable(sheet, RECORD_HEADERS).find((r) => String(r.id) === String(recordId))
+    if (!record) return { error: "post_not_found" }
+    if (String(record.student_id) !== String(student.id)) return { error: "not_yours" }
+    setCell(sheet, RECORD_HEADERS, record._row, "date", target)
+    setCell(sheet, RECORD_HEADERS, record._row, "text", text)
+    setCell(sheet, RECORD_HEADERS, record._row, "senses", senses)
+    setCell(sheet, RECORD_HEADERS, record._row, "feeling", feeling)
+    setCell(sheet, RECORD_HEADERS, record._row, "updated_at", now)
   } else {
-    appendTextRow(sheet, [Utilities.getUuid(), student.id, student.display_name, target, text, "{}", "", now, now])
+    appendTextRow(sheet, [Utilities.getUuid(), student.id, student.display_name, target, text, senses, feeling, "{}", "", now, now])
   }
-
-  const dates = parseDatesCell(student.stamp_dates)
-  if (dates.indexOf(target) === -1) dates.push(target)
-  saveStampDates(student, dates)
-
+  touchStudent(student)
   return formatStudent(findStudentById(studentId), true)
 }
 
-function deletePost(studentId, dateStr) {
+function deleteRecord(studentId, recordId) {
   const student = findStudentById(studentId)
   if (!student) return { error: "student_not_found" }
-
-  const target = String(dateStr || "")
-  const dateError = checkDateInRange(toDateStr(student.start_date), target)
-  if (dateError) return { error: dateError }
-
-  const existing = findPost(studentId, target)
-  if (existing) postsSheet().deleteRow(existing._row)
-
-  const dates = parseDatesCell(student.stamp_dates).filter((d) => d !== target)
-  saveStampDates(student, dates)
-
+  const sheet = recordsSheet()
+  const record = readTable(sheet, RECORD_HEADERS).find((r) => String(r.id) === String(recordId))
+  if (!record) return { error: "post_not_found" }
+  if (String(record.student_id) !== String(student.id)) return { error: "not_yours" }
+  sheet.deleteRow(record._row)
+  touchStudent(student)
   return formatStudent(findStudentById(studentId), true)
 }
 
@@ -356,7 +370,7 @@ function getFeed(studentId) {
   const student = findStudentById(studentId)
   if (!student) return { error: "not_found" }
 
-  const posts = readTable(postsSheet(), POST_HEADERS)
+  const posts = readTable(recordsSheet(), RECORD_HEADERS)
     .filter((p) => String(p.hidden) !== "1")
     .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
     .slice(0, FEED_LIMIT)
@@ -366,6 +380,8 @@ function getFeed(studentId) {
         id: p.id,
         date: toDateStr(p.date),
         text: String(p.text),
+        senses: parseSenses(p.senses),
+        feeling: String(p.feeling || ""),
         counts: countsOf(reactions),
         mine: mineOf(reactions, String(student.id)),
         is_mine: String(p.student_id) === String(student.id),
@@ -374,13 +390,13 @@ function getFeed(studentId) {
   return { posts }
 }
 
-function reactToPost(studentId, postId, type) {
+function reactToRecord(studentId, postId, type) {
   const student = findStudentById(studentId)
   if (!student) return { error: "student_not_found" }
   if (REACTION_TYPES.indexOf(type) === -1) return { error: "invalid_reaction" }
 
-  const sheet = postsSheet()
-  const post = readTable(sheet, POST_HEADERS).find((p) => String(p.id) === String(postId))
+  const sheet = recordsSheet()
+  const post = readTable(sheet, RECORD_HEADERS).find((p) => String(p.id) === String(postId))
   if (!post || String(post.hidden) === "1") return { error: "post_not_found" }
   if (String(post.student_id) === String(student.id)) return { error: "own_post" }
 
@@ -391,7 +407,7 @@ function reactToPost(studentId, postId, type) {
   if (idx >= 0) list.splice(idx, 1)
   else list.push(sid)
   reactions[type] = list
-  setCell(sheet, POST_HEADERS, post._row, "reactions", JSON.stringify(reactions))
+  setCell(sheet, RECORD_HEADERS, post._row, "reactions", JSON.stringify(reactions))
 
   return { post_id: post.id, counts: countsOf(reactions), mine: mineOf(reactions, sid) }
 }
@@ -411,12 +427,23 @@ function adminList(pin) {
   if (authError) return { error: authError }
 
   const groups = rosterMap()
+  const records = readTable(recordsSheet(), RECORD_HEADERS)
+  const stats = {} // 受講生ID → { count, days }
+  records.forEach((r) => {
+    const key = String(r.student_id)
+    if (!stats[key]) stats[key] = { count: 0, days: {} }
+    stats[key].count++
+    stats[key].days[toDateStr(r.date)] = true
+  })
   const students = readTable(studentsSheet(), STUDENT_HEADERS).map((s) => {
     const student = formatStudent(s, false)
+    const st = stats[String(s.id)] || { count: 0, days: {} }
     student.group = groups[String(s.display_name).trim().toLowerCase()] || ""
+    student.record_count = st.count
+    student.record_days = Object.keys(st.days).length
     return student
   })
-  const posts = readTable(postsSheet(), POST_HEADERS)
+  const posts = records
     .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
     .map((p) => {
       const counts = countsOf(parseReactions(p.reactions))
@@ -425,6 +452,8 @@ function adminList(pin) {
         display_name: p.display_name,
         date: toDateStr(p.date),
         text: String(p.text),
+        senses: parseSenses(p.senses),
+        feeling: String(p.feeling || ""),
         counts,
         hidden: String(p.hidden) === "1",
       }
@@ -432,14 +461,14 @@ function adminList(pin) {
   return { students, posts }
 }
 
-function hidePost(pin, postId, hidden) {
+function hideRecord(pin, postId, hidden) {
   const authError = checkAdmin(pin)
   if (authError) return { error: authError }
 
-  const sheet = postsSheet()
-  const post = readTable(sheet, POST_HEADERS).find((p) => String(p.id) === String(postId))
+  const sheet = recordsSheet()
+  const post = readTable(sheet, RECORD_HEADERS).find((p) => String(p.id) === String(postId))
   if (!post) return { error: "post_not_found" }
-  setCell(sheet, POST_HEADERS, post._row, "hidden", hidden ? "1" : "")
+  setCell(sheet, RECORD_HEADERS, post._row, "hidden", hidden ? "1" : "")
   return { post_id: post.id, hidden: !!hidden }
 }
 

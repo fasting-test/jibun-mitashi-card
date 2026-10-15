@@ -5,7 +5,25 @@
 const PROGRAM_START_DATE = "2026-11-01"
 const PROGRAM_LENGTH = 30
 const MAX_TEXT_LENGTH = 300
+const MAX_FEELING_LENGTH = 300
 const STUDENT_ID_KEY = "jmc_student_id"
+const RECORD_DRAFT_KEY = "jmc_record_draft"
+
+// 五感と気持ちの記録は、11/12のプレ講座のあとから使えるようにする
+const SENSES_START_DATE = "2026-11-12"
+
+// 五感(Code.gs の SENSE_TYPES と合わせる)
+const SENSES = [
+  { type: "smell", emoji: "🌿", label: "嗅覚", hint: "香り" },
+  { type: "touch", emoji: "🧶", label: "触覚", hint: "肌触り・温かさ" },
+  { type: "taste", emoji: "🍵", label: "味覚", hint: "味" },
+  { type: "hearing", emoji: "🎵", label: "聴覚", hint: "音" },
+  { type: "sight", emoji: "🌷", label: "視覚", hint: "景色・色" },
+]
+
+function senseOf(type) {
+  return SENSES.find((s) => s.type === type) || null
+}
 
 // リアクションの種類(Code.gs の REACTION_TYPES と合わせる)
 const REACTIONS = [
@@ -133,23 +151,22 @@ function clearSharedDisplayName() {
   }
 }
 
-// 書きかけの文章の自動保存(日付ごと)
-function draftKey(date) {
-  return `jmc_draft_${date}`
-}
-
-function loadDraft(date) {
+// 書きかけの記録の自動保存(画面を閉じても消えない)
+function loadRecordDraft() {
   try {
-    return localStorage.getItem(draftKey(date))
+    return JSON.parse(localStorage.getItem(RECORD_DRAFT_KEY) || "null")
   } catch {
     return null
   }
 }
 
-function saveDraft(date, text) {
+function saveRecordDraft(draft) {
   try {
-    if (text) localStorage.setItem(draftKey(date), text)
-    else localStorage.removeItem(draftKey(date))
+    if (draft && (draft.text || draft.feeling || (draft.senses && draft.senses.length))) {
+      localStorage.setItem(RECORD_DRAFT_KEY, JSON.stringify(draft))
+    } else {
+      localStorage.removeItem(RECORD_DRAFT_KEY)
+    }
   } catch {
     // 無視
   }
@@ -190,14 +207,14 @@ function apiErrorMessage(error) {
   const messages = {
     not_found: "データが見つかりませんでした",
     student_not_found: "データが見つかりませんでした",
-    post_not_found: "この投稿は見つかりませんでした",
+    post_not_found: "この記録は見つかりませんでした",
     unknown_action: "通信エラーが発生しました",
     future_date: "まだ先の日付には書けません",
-    out_of_range: "この日はチャレンジの期間外です",
+    out_of_range: "この日は期間外です",
     invalid_date: "日付が正しくありません",
     empty_text: "内容を入力してください",
     text_too_long: `${MAX_TEXT_LENGTH}文字以内で入力してください`,
-    own_post: "自分の投稿にはリアクションできません",
+    own_post: "自分の記録にはリアクションできません",
     no_group: "まだ期(グループ)の設定がありません。運営にお知らせください",
     not_open: `${formatMdWeekday(PROGRAM_START_DATE)}のオープン後に投稿できます`,
     invalid_kind: "投稿の種類を選んでください",
@@ -225,12 +242,13 @@ async function getStudentById(id) {
   return data && data.id ? data : null
 }
 
-async function savePost(studentId, date, text) {
-  return apiPost({ action: "savePost", student_id: studentId, date, text })
+// recordId を渡すと書き直し、空なら新しい記録
+async function saveRecord(studentId, recordId, date, text, senses, feeling) {
+  return apiPost({ action: "saveRecord", student_id: studentId, record_id: recordId || "", date, text, senses, feeling })
 }
 
-async function deletePost(studentId, date) {
-  return apiPost({ action: "deletePost", student_id: studentId, date })
+async function deleteRecord(studentId, recordId) {
+  return apiPost({ action: "deleteRecord", student_id: studentId, record_id: recordId })
 }
 
 async function fetchFeed(studentId) {

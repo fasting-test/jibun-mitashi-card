@@ -3,36 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>自分満たしカード</title>
+  <title>わたし推し活</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="style.css?v=8" />
 </head>
 <body>
   <main id="main-el">
     <!-- ツールの切り替え(31日間チャレンジ ⇔ 自分満たし)。チャレンジシート側にも同じ並びの切り替えがある -->
     <nav class="site-switch" aria-label="ツールの切り替え">
       <a class="site-switch-item" href="https://fasting-test.github.io/challenge-stamp-card/">チャレンジシート</a>
-      <a class="site-switch-item active" href="./" aria-current="page">自分満たし</a>
+      <a class="site-switch-item active" href="./" aria-current="page">わたし推し活</a>
     </nav>
 
     <div class="tab-bar">
-      <button type="button" id="tab-btn-student" class="active">スタンプカード</button>
+      <button type="button" id="tab-btn-student" class="active">わたしの記録</button>
       <button type="button" id="tab-btn-community">交流</button>
       <button type="button" id="tab-btn-admin">管理者</button>
     </div>
 
-    <!-- ==================== 受講生タブ ==================== -->
+    <!-- ==================== わたしの記録タブ ==================== -->
     <div id="tab-panel-student" class="tab-panel">
       <div id="student-loading" class="loading">読み込み中...</div>
 
       <!-- オープン前(11/1より前)の画面 -->
       <div id="student-soon" hidden>
         <div class="lead">
-          <p class="eyebrow">自分満たしカード</p>
+          <p class="eyebrow">わたし推し活</p>
           <h1 id="soon-title"></h1>
-          <p>毎日1つ「今日自分を満たしたこと」を書いて、<br />スタンプをためていく、30日間のチャレンジです。</p>
+          <p>毎日の小さな「好き」を記録して、<br />「私って、こんなことが好きなんだ」を見つけていく30日間です。</p>
         </div>
         <div class="soon-count">
           <p class="soon-count-label">オープンまで</p>
@@ -44,9 +44,9 @@
       <!-- 登録フォーム -->
       <div id="student-register" hidden>
         <div class="lead">
-          <p class="eyebrow">自分満たしカード</p>
-          <h1>毎日1つ、<br />自分を満たすことをしよう。</h1>
-          <p>今日自分を満たしたことを書いて、スタンプをポン。<br />30日間、自分を大切にする習慣をつくろう。</p>
+          <p class="eyebrow">わたし推し活</p>
+          <h1>今日の小さな「好き」を、<br />記録しよう。</h1>
+          <p>やってみたことを書きとめて、あとから見返す。<br />「私って、こんなことが好きなんだ」の発見につなげよう。</p>
         </div>
 
         <form id="register-form">
@@ -55,7 +55,7 @@
             <p class="name-notice-sub">(呼び名は、マイページを開いたときに上に表示されている名前です)</p>
             <ul class="name-notice-list">
               <li>スマホとパソコンを両方使う場合も、同じ名前を入れれば続きから記録できます</li>
-              <li>名前が1文字でも違うと、別のカードとして扱われてしまいます</li>
+              <li>名前が1文字でも違うと、別の記録として扱われてしまいます</li>
               <li>書いた内容は、お名前なしの匿名で、みんなの画面に表示されます</li>
             </ul>
           </div>
@@ -70,7 +70,7 @@
         </form>
       </div>
 
-      <!-- カード -->
+      <!-- 記録の画面 -->
       <div id="student-card" hidden>
         <div class="character-quote">
           <img id="character-img" class="character-img" src="" alt="" />
@@ -83,52 +83,65 @@
 
         <div class="diamond-divider"><span class="diamond"></span></div>
 
-        <!-- 書く場所 -->
+        <!-- 記録する -->
         <section class="write-panel" id="write-panel">
-          <p class="write-day" id="write-day"></p>
+          <p class="write-eyebrow">わたし推し活｜記録</p>
+          <h2 class="write-title" id="write-title">今日の小さな「好き」</h2>
           <div id="write-form-wrap">
-            <textarea id="post-text" rows="4" maxlength="300" placeholder="例: 温かいお茶をゆっくり飲んだ"></textarea>
+            <label class="field-label" for="post-text">今日やってみたこと</label>
+            <textarea id="post-text" rows="2" maxlength="300" placeholder="例: お気に入りの紅茶を飲んだ"></textarea>
             <p class="char-count" id="char-count">0 / 300</p>
-            <button type="button" class="btn-primary" id="post-btn">スタンプを押す</button>
-            <p class="write-note">※ お名前は出ません。匿名でみんなに表示されます。</p>
-            <button type="button" class="btn-link" id="delete-post-btn" hidden>この日の記録を取り消す</button>
+
+            <!-- 五感と気持ち(11/12以降に表示。どちらも任意) -->
+            <div id="senses-block" hidden>
+              <label class="check-row" for="senses-toggle">
+                <input type="checkbox" id="senses-toggle" />
+                <span>五感や気持ちも記録してみる</span>
+              </label>
+              <div id="senses-fields" hidden>
+                <p class="field-label">特に印象に残った五感(いくつでも)</p>
+                <div class="sense-list" id="sense-list" role="group" aria-label="印象に残った五感"></div>
+                <label class="field-label" for="feeling-text">そのとき、どう感じた?</label>
+                <textarea id="feeling-text" rows="2" maxlength="300" placeholder="例: 香りを感じたら、ほっとした"></textarea>
+              </div>
+            </div>
+
+            <div class="date-row">
+              <label for="record-date">記録する日</label>
+              <select id="record-date"></select>
+            </div>
+
+            <button type="button" class="btn-primary" id="post-btn">記録する</button>
+            <button type="button" class="btn-link" id="cancel-edit-btn" hidden>書き直しをやめる</button>
+            <p class="write-note">※ お名前は出ません。匿名でみんなに表示されます。1日に何件でも記録できます。</p>
             <p class="error" id="post-error" hidden></p>
           </div>
           <p class="write-closed" id="write-closed" hidden></p>
         </section>
 
-        <div id="reward" class="reward-card" hidden>
-          <p class="emoji">🎉🏆🎉</p>
-          <h2>30日間、自分を満たし続けたね!</h2>
-          <p>
-            毎日、自分を大切にする時間をつくったあなたは、もう自分を満たす名人。<br />
-            この習慣を、これからも一緒に続けていこう。
-          </p>
-        </div>
+        <div class="diamond-divider"><span class="diamond"></span></div>
 
-        <div id="progress" class="progress-wrap">
-          <p class="progress-count" id="progress-count"></p>
-          <div class="progress-bar">
-            <div class="progress-bar-fill" id="progress-fill"></div>
-          </div>
-        </div>
-
-        <div class="grid" id="day-grid"></div>
-
-        <p class="footnote" id="footnote"></p>
+        <!-- わたしの記録(振り返り) -->
+        <section class="my-records" id="my-records">
+          <h2 class="feed-title">わたしの記録</h2>
+          <p class="feed-sub" id="my-records-sub"></p>
+          <p class="sense-summary" id="sense-summary" hidden></p>
+          <div id="my-records-list"></div>
+          <p class="feed-empty" id="my-records-empty" hidden>まだ記録がありません。今日の小さな「好き」から始めよう。</p>
+        </section>
 
         <div class="diamond-divider"><span class="diamond"></span></div>
 
-        <!-- みんなの投稿 -->
+        <!-- みんなの記録 -->
         <section class="feed" id="feed">
-          <h2 class="feed-title">みんなの満たしたこと</h2>
-          <p class="feed-sub">お名前は出ません。気に入った投稿に、リアクションを送ろう。</p>
+          <h2 class="feed-title">みんなの「好き」</h2>
+          <p class="feed-sub">お名前は出ません。気に入った記録に、リアクションを送ろう。</p>
           <div id="feed-list"></div>
           <p class="loading small" id="feed-loading">読み込み中...</p>
-          <p class="feed-empty" id="feed-empty" hidden>まだ投稿がありません。最初の1人になろう!</p>
+          <p class="feed-empty" id="feed-empty" hidden>まだ記録がありません。最初の1人になろう!</p>
           <p class="error" id="feed-error" hidden></p>
           <button type="button" class="btn-link" id="feed-more-btn" hidden>もっと見る</button>
-          <button type="button" class="btn-link" id="feed-reload-btn">最新の投稿に更新する</button>
+          <button type="button" class="btn-link" id="feed-reload-btn">最新の記録に更新する</button>
         </section>
 
         <button type="button" class="btn-link" id="back-to-login-btn">ログイン画面に戻る</button>
@@ -142,7 +155,7 @@
       <!-- 使えない状態(未ログイン・オープン前・期の設定なし)のお知らせ -->
       <div id="community-gate" hidden>
         <p class="write-closed" id="community-gate-text"></p>
-        <button type="button" class="btn-primary gate-btn" id="community-gate-btn" hidden>スタンプカードへ</button>
+        <button type="button" class="btn-primary gate-btn" id="community-gate-btn" hidden>わたしの記録へ</button>
       </div>
 
       <div id="community-main" hidden>
@@ -210,7 +223,7 @@
                   <th>お名前</th>
                   <th>期</th>
                   <th>経過</th>
-                  <th>達成日数</th>
+                  <th>記録</th>
                   <th>最終更新</th>
                 </tr>
               </thead>
@@ -218,8 +231,8 @@
             </table>
           </div>
 
-          <h2 class="admin-section-title">投稿の管理</h2>
-          <p class="admin-summary">不適切な投稿は「非表示にする」を押すと、みんなの画面から消えます(本人の画面とスタンプは、そのまま残ります)。</p>
+          <h2 class="admin-section-title">記録の管理</h2>
+          <p class="admin-summary">不適切な記録は「非表示にする」を押すと、みんなの画面から消えます(本人の画面には、そのまま残ります)。</p>
           <div id="admin-posts"></div>
 
           <h2 class="admin-section-title">期(グループ)の設定</h2>
@@ -251,7 +264,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="config.js?v=1"></script>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
   <script>
     const REGISTER_DRAFT_KEY = "jmc_register_draft"
     const ADMIN_PIN_KEY = "jmc_admin_pin"
@@ -279,11 +292,12 @@
 
     Object.entries(tabs).forEach(([name, t]) => t.btn.addEventListener("click", () => showTab(name)))
 
-    // ---------------- 受講生タブ ----------------
+    // ---------------- わたしの記録タブ ----------------
 
     const studentLoadingEl = document.getElementById("student-loading")
     const studentRegisterEl = document.getElementById("student-register")
     const studentCardEl = document.getElementById("student-card")
+    const studentSoonEl = document.getElementById("student-soon")
 
     const nameInput = document.getElementById("display_name")
     const registerForm = document.getElementById("register-form")
@@ -293,39 +307,40 @@
     const characterImgEl = document.getElementById("character-img")
     const quoteTitleEl = document.getElementById("quote-title")
     const audioLinkEl = document.getElementById("audio-link")
-    const writeDayEl = document.getElementById("write-day")
+    const writeTitleEl = document.getElementById("write-title")
     const writeFormWrapEl = document.getElementById("write-form-wrap")
     const writeClosedEl = document.getElementById("write-closed")
     const postTextEl = document.getElementById("post-text")
     const charCountEl = document.getElementById("char-count")
+    const sensesBlockEl = document.getElementById("senses-block")
+    const sensesToggleEl = document.getElementById("senses-toggle")
+    const sensesFieldsEl = document.getElementById("senses-fields")
+    const senseListEl = document.getElementById("sense-list")
+    const feelingTextEl = document.getElementById("feeling-text")
+    const recordDateEl = document.getElementById("record-date")
     const postBtn = document.getElementById("post-btn")
-    const deletePostBtn = document.getElementById("delete-post-btn")
+    const cancelEditBtn = document.getElementById("cancel-edit-btn")
     const postErrorEl = document.getElementById("post-error")
-    const rewardEl = document.getElementById("reward")
-    const progressEl = document.getElementById("progress")
-    const progressCountEl = document.getElementById("progress-count")
-    const progressFillEl = document.getElementById("progress-fill")
-    const gridEl = document.getElementById("day-grid")
-    const footnoteEl = document.getElementById("footnote")
+    const myRecordsSubEl = document.getElementById("my-records-sub")
+    const senseSummaryEl = document.getElementById("sense-summary")
+    const myRecordsListEl = document.getElementById("my-records-list")
+    const myRecordsEmptyEl = document.getElementById("my-records-empty")
 
     let student = null
-    let stampDates = new Set()
-    let myPosts = {}
+    let myRecords = []
     let todayOffset = 0
-    let selectedDate = null
+    let selectedSenses = new Set()
+    let editingId = null // 書き直し中の記録ID
     let isPosting = false
 
     function lastDayOf(start) {
       return addDays(start, PROGRAM_LENGTH - 1)
     }
 
-    // 今日がチャレンジ期間内なら今日、期間が終わっていれば最終日、始まる前なら null
-    function defaultSelectedDate() {
-      if (todayOffset < 0) return null
-      return todayOffset >= PROGRAM_LENGTH ? lastDayOf(student.start_date) : todayStr()
+    // 五感と気持ちの欄を出すかどうか(11/12以降)
+    function sensesAvailable() {
+      return todayStr() >= SENSES_START_DATE
     }
-
-    const studentSoonEl = document.getElementById("student-soon")
 
     // オープン前(開始日より前)は、登録も記録もできないので、お知らせの画面だけを出す
     function showOpeningSoon() {
@@ -360,9 +375,11 @@
         setSharedDisplayName(student.display_name)
         applyStudent(student)
         todayOffset = dayOffsetFromStart(student.start_date)
-        selectedDate = defaultSelectedDate()
         characterImgEl.src = randomCharacterImage()
 
+        renderSenseList()
+        renderDateOptions()
+        restoreRecordDraft()
         renderAll()
         studentLoadingEl.hidden = true
         studentRegisterEl.hidden = true
@@ -389,8 +406,7 @@
 
     function applyStudent(s) {
       student = s
-      stampDates = new Set(s.stamp_dates)
-      myPosts = s.my_posts || {}
+      myRecords = s.my_records || []
     }
 
     nameInput.addEventListener("input", () => {
@@ -438,18 +454,21 @@
       window.scrollTo(0, 0)
     })
 
-    // ---- カード全体の描画 ----
+    // ---- 全体の描画 ----
 
     function renderAll() {
       renderQuote()
-      renderProgress()
-      renderGrid()
       renderWritePanel()
+      renderMyRecords()
+    }
+
+    function todaysRecordCount() {
+      const today = todayStr()
+      return myRecords.filter((r) => r.date === today).length
     }
 
     function renderQuote() {
       const name = withChan(student.display_name)
-      const today = todayStr()
 
       // 今日が「N日目」なら、音声サイトのN日目のページへ(期間が終わっていれば最終日)。始まる前は出さない
       const dayNumber = Math.min(Math.max(todayOffset + 1, 1), PROGRAM_LENGTH)
@@ -458,121 +477,144 @@
 
       if (todayOffset < 0) {
         quoteTitleEl.textContent = `${name}、${formatMdWeekday(student.start_date)}からスタート。楽しみに待っていてね!`
-      } else if (stampDates.has(today)) {
-        quoteTitleEl.textContent = `${name}、今日も自分を満たせたね。みんなの投稿ものぞいてみよう!`
+      } else if (todaysRecordCount() > 0) {
+        quoteTitleEl.textContent = `${name}、今日も「好き」を見つけたね。ほかにもあったら、いくつでも書いていいよ。`
       } else {
-        quoteTitleEl.textContent = `${name}、今日は自分を何で満たした?`
+        quoteTitleEl.textContent = `${name}、今日は、どんな小さな「好き」があった?`
       }
     }
 
-    function renderProgress() {
-      const achievedCount = stampDates.size
-      const isComplete = achievedCount >= PROGRAM_LENGTH
-      rewardEl.hidden = !isComplete
-      progressEl.hidden = isComplete
-      if (!isComplete) {
-        progressCountEl.textContent = `${achievedCount} / ${PROGRAM_LENGTH} 日 達成中`
-        progressFillEl.style.width = `${(achievedCount / PROGRAM_LENGTH) * 100}%`
-      }
-    }
+    // ---- 記録する ----
 
-    function renderGrid() {
-      gridEl.innerHTML = ""
-      for (let i = 0; i < PROGRAM_LENGTH; i++) {
-        const date = addDays(student.start_date, i)
-        const filled = stampDates.has(date)
-        const isFuture = i > todayOffset
-
+    function renderSenseList() {
+      senseListEl.innerHTML = ""
+      SENSES.forEach((sense) => {
         const btn = document.createElement("button")
         btn.type = "button"
-        btn.className = "day-cell"
-        if (filled) btn.classList.add("is-filled")
-        if (i === todayOffset) btn.classList.add("is-today")
-        if (isFuture) btn.classList.add("is-future")
-        if (date === selectedDate) btn.classList.add("is-selected")
-        btn.textContent = filled ? "★" : String(i + 1)
-        btn.setAttribute("aria-label", `${i + 1}日目 ${formatMdWeekday(date)}${filled ? "・達成済み" : ""}`)
-        if (!isFuture) {
-          btn.classList.add("is-open")
-          btn.addEventListener("click", () => selectDate(date))
-        } else {
-          btn.disabled = true
-        }
-        gridEl.appendChild(btn)
-      }
-
-      if (todayOffset < 0) {
-        footnoteEl.textContent = `${formatMdWeekday(student.start_date)}になったら、書いてスタンプを押せるようになります`
-      } else if (todayOffset < PROGRAM_LENGTH) {
-        footnoteEl.textContent = "マスをタップすると、その日の記録を書いたり、読み返したりできます(押し忘れた日も遡って書けます)"
-      } else {
-        footnoteEl.textContent = "30日間が終了しました。おつかれさまでした!"
-      }
+        btn.className = "sense-btn"
+        btn.setAttribute("aria-pressed", String(selectedSenses.has(sense.type)))
+        btn.classList.toggle("active", selectedSenses.has(sense.type))
+        btn.textContent = `${sense.emoji} ${sense.label} — ${sense.hint}`
+        btn.addEventListener("click", () => {
+          if (selectedSenses.has(sense.type)) selectedSenses.delete(sense.type)
+          else selectedSenses.add(sense.type)
+          renderSenseList()
+          saveDraftFromForm()
+        })
+        senseListEl.appendChild(btn)
+      })
     }
 
-    // ---- 書く場所 ----
-
-    function selectDate(date) {
-      selectedDate = date
-      renderGrid()
-      renderWritePanel()
-      document.getElementById("write-panel").scrollIntoView({ behavior: "smooth", block: "center" })
+    // 記録する日の選択肢(今日から開始日まで。期間が終わっていれば最終日から)
+    function renderDateOptions() {
+      recordDateEl.innerHTML = ""
+      if (todayOffset < 0) return
+      const latest = todayOffset >= PROGRAM_LENGTH ? lastDayOf(student.start_date) : todayStr()
+      const latestOffset = dayOffsetFromStart(student.start_date, latest)
+      for (let i = latestOffset; i >= 0; i--) {
+        const date = addDays(student.start_date, i)
+        const opt = document.createElement("option")
+        opt.value = date
+        opt.textContent = `${formatMdWeekday(date)}${date === todayStr() ? "(今日)" : ""}`
+        recordDateEl.appendChild(opt)
+      }
+      recordDateEl.value = latest
     }
 
     function renderWritePanel() {
       postErrorEl.hidden = true
-      if (!selectedDate) {
-        writeDayEl.textContent = "自分満たしの記録"
+      if (todayOffset < 0) {
         writeFormWrapEl.hidden = true
         writeClosedEl.hidden = false
-        writeClosedEl.textContent = `${formatMdWeekday(student.start_date)}から、毎日1つ「今日自分を満たしたこと」を書いてスタンプを押せます。`
+        writeClosedEl.textContent = `${formatMdWeekday(student.start_date)}から、毎日の小さな「好き」を記録できます。`
         return
       }
-
       writeFormWrapEl.hidden = false
       writeClosedEl.hidden = true
 
-      const index = dayOffsetFromStart(student.start_date, selectedDate) + 1
-      const isToday = selectedDate === todayStr()
-      writeDayEl.textContent = `${isToday ? "今日・" : ""}${index}日目(${formatMdWeekday(selectedDate)})に自分を満たしたこと`
-
-      const saved = myPosts[selectedDate] ? myPosts[selectedDate].text : ""
-      // 書きかけ(保存前)の文章があれば、それを優先して復元する
-      const draft = loadDraft(selectedDate)
-      postTextEl.value = draft !== null ? draft : saved
+      sensesBlockEl.hidden = !sensesAvailable()
+      sensesFieldsEl.hidden = !(sensesAvailable() && sensesToggleEl.checked)
+      writeTitleEl.textContent = editingId ? "記録を書き直す" : "今日の小さな「好き」"
+      postBtn.textContent = editingId ? "書き直して保存する" : "記録する"
+      cancelEditBtn.hidden = !editingId
       updateCharCount()
-      const posted = !!myPosts[selectedDate]
-      postBtn.textContent = posted ? "書き直して更新する" : "スタンプを押す"
-      deletePostBtn.hidden = !posted
     }
 
     function updateCharCount() {
       charCountEl.textContent = `${postTextEl.value.length} / ${MAX_TEXT_LENGTH}`
     }
 
+    function saveDraftFromForm() {
+      // 書き直し中は、下書きとして保存しない(元の記録があるため)
+      if (editingId) return
+      saveRecordDraft({
+        text: postTextEl.value,
+        senses: [...selectedSenses],
+        feeling: feelingTextEl.value,
+        sensesOn: sensesToggleEl.checked,
+        date: recordDateEl.value,
+      })
+    }
+
+    function restoreRecordDraft() {
+      const draft = loadRecordDraft()
+      if (!draft) return
+      postTextEl.value = draft.text || ""
+      feelingTextEl.value = draft.feeling || ""
+      selectedSenses = new Set((draft.senses || []).filter((t) => senseOf(t)))
+      sensesToggleEl.checked = !!draft.sensesOn
+      if (draft.date && [...recordDateEl.options].some((o) => o.value === draft.date)) recordDateEl.value = draft.date
+      renderSenseList()
+    }
+
+    function clearForm() {
+      postTextEl.value = ""
+      feelingTextEl.value = ""
+      selectedSenses = new Set()
+      sensesToggleEl.checked = false
+      editingId = null
+      renderSenseList()
+      renderDateOptions()
+      saveRecordDraft(null)
+    }
+
     postTextEl.addEventListener("input", () => {
       updateCharCount()
-      const saved = myPosts[selectedDate] ? myPosts[selectedDate].text : ""
-      // 保存済みの内容と同じなら、自動保存は不要(消す)
-      saveDraft(selectedDate, postTextEl.value === saved ? "" : postTextEl.value)
+      saveDraftFromForm()
+    })
+    feelingTextEl.addEventListener("input", saveDraftFromForm)
+    recordDateEl.addEventListener("change", saveDraftFromForm)
+    sensesToggleEl.addEventListener("change", () => {
+      sensesFieldsEl.hidden = !sensesToggleEl.checked
+      saveDraftFromForm()
     })
 
+    function showPostError(message) {
+      postErrorEl.textContent = message
+      postErrorEl.hidden = false
+    }
+
     postBtn.addEventListener("click", async () => {
-      if (isPosting || !selectedDate) return
+      if (isPosting) return
       const text = postTextEl.value.trim()
       if (!text) {
-        showPostError("内容を入力してください")
+        showPostError("今日やってみたことを入力してください")
         return
       }
+      // 五感と気持ちは任意。チェックを外していれば送らない
+      const useSenses = sensesAvailable() && sensesToggleEl.checked
+      const senses = useSenses ? [...selectedSenses] : []
+      const feeling = useSenses ? feelingTextEl.value.trim() : ""
+      const wasEditing = !!editingId
+
       isPosting = true
       postBtn.disabled = true
       postErrorEl.hidden = true
-      const wasPosted = !!myPosts[selectedDate]
       try {
-        const updated = await savePost(student.id, selectedDate, text)
-        saveDraft(selectedDate, "")
+        const updated = await saveRecord(student.id, editingId, recordDateEl.value, text, senses, feeling)
         applyStudent(updated)
-        if (!wasPosted) fireConfetti()
+        clearForm()
+        if (!wasEditing) fireConfetti()
         renderAll()
         loadFeed()
       } catch (err) {
@@ -583,31 +625,123 @@
       }
     })
 
-    deletePostBtn.addEventListener("click", async () => {
-      if (isPosting || !selectedDate) return
-      if (!confirm("この日の記録を取り消します。\n(スタンプも外れます)")) return
-      isPosting = true
-      deletePostBtn.disabled = true
-      try {
-        const updated = await deletePost(student.id, selectedDate)
-        saveDraft(selectedDate, "")
-        applyStudent(updated)
-        renderAll()
-        loadFeed()
-      } catch (err) {
-        showPostError(err && err.message ? err.message : "取り消せませんでした。もう一度お試しください。")
-      } finally {
-        isPosting = false
-        deletePostBtn.disabled = false
-      }
+    cancelEditBtn.addEventListener("click", () => {
+      clearForm()
+      restoreRecordDraft()
+      renderWritePanel()
     })
 
-    function showPostError(message) {
-      postErrorEl.textContent = message
-      postErrorEl.hidden = false
+    // 自分の記録を、書き直し用にフォームへ戻す
+    function startEdit(record) {
+      editingId = record.id
+      postTextEl.value = record.text
+      feelingTextEl.value = record.feeling || ""
+      selectedSenses = new Set(record.senses || [])
+      sensesToggleEl.checked = !!(record.feeling || (record.senses && record.senses.length))
+      renderDateOptions()
+      if ([...recordDateEl.options].some((o) => o.value === record.date)) recordDateEl.value = record.date
+      renderSenseList()
+      renderWritePanel()
+      document.getElementById("write-panel").scrollIntoView({ behavior: "smooth", block: "start" })
     }
 
-    // ---------------- みんなの投稿 ----------------
+    // ---- わたしの記録(振り返り) ----
+
+    function buildSenseChips(senses) {
+      const wrap = document.createElement("div")
+      wrap.className = "sense-chips"
+      ;(senses || []).forEach((t) => {
+        const sense = senseOf(t)
+        if (!sense) return
+        const chip = document.createElement("span")
+        chip.className = "sense-chip"
+        chip.textContent = `${sense.emoji} ${sense.label}`
+        wrap.appendChild(chip)
+      })
+      return wrap
+    }
+
+    function renderMyRecords() {
+      myRecordsListEl.innerHTML = ""
+      myRecordsEmptyEl.hidden = myRecords.length > 0
+
+      const days = new Set(myRecords.map((r) => r.date)).size
+      myRecordsSubEl.textContent = myRecords.length > 0
+        ? `${days}日間で、${myRecords.length}個の「好き」を見つけました。`
+        : "書いた記録は、ここに並びます。あとから見返して、自分の「好き」を見つけよう。"
+
+      // よく感じた五感(五感を記録したものがあれば)
+      const tally = {}
+      myRecords.forEach((r) => (r.senses || []).forEach((t) => (tally[t] = (tally[t] || 0) + 1)))
+      const ranked = Object.entries(tally).sort((a, b) => b[1] - a[1]).slice(0, 3)
+      senseSummaryEl.hidden = ranked.length === 0
+      if (ranked.length) {
+        senseSummaryEl.textContent = "よく感じた五感: " + ranked.map(([t, n]) => `${senseOf(t).emoji}${senseOf(t).label} ${n}回`).join(" / ")
+      }
+
+      let currentDate = null
+      myRecords.forEach((record) => {
+        if (record.date !== currentDate) {
+          currentDate = record.date
+          const head = document.createElement("p")
+          head.className = "record-date"
+          const index = dayOffsetFromStart(student.start_date, record.date) + 1
+          head.textContent = `${formatMdWeekday(record.date)}・${index}日目`
+          myRecordsListEl.appendChild(head)
+        }
+        myRecordsListEl.appendChild(buildMyRecord(record))
+      })
+    }
+
+    function buildMyRecord(record) {
+      const item = document.createElement("article")
+      item.className = "record-item"
+
+      const text = document.createElement("p")
+      text.className = "record-text"
+      text.textContent = record.text
+      item.appendChild(text)
+
+      if (record.senses && record.senses.length) item.appendChild(buildSenseChips(record.senses))
+      if (record.feeling) {
+        const feeling = document.createElement("p")
+        feeling.className = "record-feeling"
+        feeling.textContent = record.feeling
+        item.appendChild(feeling)
+      }
+
+      const actions = document.createElement("div")
+      actions.className = "record-actions"
+      const edit = document.createElement("button")
+      edit.type = "button"
+      edit.className = "btn-link inline"
+      edit.textContent = "書き直す"
+      edit.addEventListener("click", () => startEdit(record))
+      actions.appendChild(edit)
+      const del = document.createElement("button")
+      del.type = "button"
+      del.className = "btn-link inline danger"
+      del.textContent = "削除"
+      del.addEventListener("click", async () => {
+        if (!confirm("この記録を削除します。")) return
+        del.disabled = true
+        try {
+          const updated = await deleteRecord(student.id, record.id)
+          if (editingId === record.id) clearForm()
+          applyStudent(updated)
+          renderAll()
+          loadFeed()
+        } catch (err) {
+          del.disabled = false
+          alert(err && err.message ? err.message : "削除できませんでした")
+        }
+      })
+      actions.appendChild(del)
+      item.appendChild(actions)
+      return item
+    }
+
+    // ---------------- みんなの記録 ----------------
 
     const feedListEl = document.getElementById("feed-list")
     const feedLoadingEl = document.getElementById("feed-loading")
@@ -627,7 +761,7 @@
         feedShown = FEED_PAGE_SIZE
         renderFeed()
       } catch (err) {
-        feedErrorEl.textContent = "みんなの投稿を読み込めませんでした。少し待ってから、更新ボタンを押してください。"
+        feedErrorEl.textContent = "みんなの記録を読み込めませんでした。少し待ってから、更新ボタンを押してください。"
         feedErrorEl.hidden = false
       } finally {
         feedLoadingEl.hidden = true
@@ -648,14 +782,22 @@
 
       const meta = document.createElement("p")
       meta.className = "feed-meta"
-      meta.textContent = formatMdWeekday(post.date) + (post.is_mine ? "・あなたの投稿" : "")
+      meta.textContent = formatMdWeekday(post.date) + (post.is_mine ? "・あなたの記録" : "")
       item.appendChild(meta)
 
-      // 投稿の本文は textContent で入れる(HTMLとして解釈させない)
+      // 本文は textContent で入れる(HTMLとして解釈させない)
       const body = document.createElement("p")
       body.className = "feed-text"
       body.textContent = post.text
       item.appendChild(body)
+
+      if (post.senses && post.senses.length) item.appendChild(buildSenseChips(post.senses))
+      if (post.feeling) {
+        const feeling = document.createElement("p")
+        feeling.className = "record-feeling"
+        feeling.textContent = post.feeling
+        item.appendChild(feeling)
+      }
 
       const bar = document.createElement("div")
       bar.className = "reaction-bar"
@@ -749,7 +891,7 @@
       }
       await studentReady
       if (!student) {
-        showCommunityGate("まず「スタンプカード」のタブで、お名前を入れてください。", true)
+        showCommunityGate("まず「わたしの記録」のタブで、お名前を入れてください。", true)
         return
       }
       if (communityLoadedFor === student.id) return
@@ -1250,8 +1392,8 @@
       adminLoadingEl.hidden = true
       adminListEl.hidden = false
 
-      const students = data.students.slice().sort((a, b) => b.achieved_count - a.achieved_count)
-      adminSummaryEl.textContent = `全${students.length}名 / 投稿${data.posts.length}件`
+      const students = data.students.slice().sort((a, b) => b.record_count - a.record_count)
+      adminSummaryEl.textContent = `全${students.length}名 / 記録${data.posts.length}件`
       adminTableBody.innerHTML = ""
       students.forEach((s) => {
         const elapsed = Math.min(Math.max(dayOffsetFromStart(s.start_date) + 1, 0), PROGRAM_LENGTH)
@@ -1259,7 +1401,7 @@
         tr.appendChild(cell(s.display_name))
         tr.appendChild(cell(s.group || "未設定", s.group ? "" : "muted"))
         tr.appendChild(cell(`${elapsed}日目`))
-        tr.appendChild(cell(`${s.achieved_count} / ${PROGRAM_LENGTH}`, "count"))
+        tr.appendChild(cell(`${s.record_count}件・${s.record_days}日`, "count"))
         tr.appendChild(cell(formatUpdated(s.updated_at)))
         adminTableBody.appendChild(tr)
       })
@@ -1283,6 +1425,13 @@
       body.className = "feed-text"
       body.textContent = p.text
       item.appendChild(body)
+      if (p.senses && p.senses.length) item.appendChild(buildSenseChips(p.senses))
+      if (p.feeling) {
+        const feeling = document.createElement("p")
+        feeling.className = "record-feeling"
+        feeling.textContent = p.feeling
+        item.appendChild(feeling)
+      }
 
       const btn = document.createElement("button")
       btn.type = "button"
