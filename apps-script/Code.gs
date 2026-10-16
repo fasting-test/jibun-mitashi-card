@@ -15,7 +15,8 @@ const STUDENTS_SHEET = "students"
 // 毎日の記録(1日に何件でも)。スタンプ方式だった頃の posts シートは使わない
 const RECORDS_SHEET = "records"
 const STUDENT_HEADERS = ["id", "display_name", "start_date", "stamp_dates", "achieved_count", "created_at", "updated_at"]
-const RECORD_HEADERS = ["id", "student_id", "display_name", "date", "text", "senses", "feeling", "reactions", "hidden", "created_at", "updated_at"]
+// photo_id は後から足した列(既存のシートには、見出しを自動で書き足す)
+const RECORD_HEADERS = ["id", "student_id", "display_name", "date", "text", "senses", "feeling", "reactions", "hidden", "created_at", "updated_at", "photo_id"]
 
 // チャレンジ全体の開始日(固定)と日数。いつ登録しても、この日が1日目になる。
 const PROGRAM_START_DATE = "2026-11-01"
@@ -65,7 +66,9 @@ function doPost(e) {
         case "registerOrResume":
           return respond(registerOrResume(body.display_name))
         case "saveRecord":
-          return respond(saveRecord(body.student_id, body.record_id, body.date, body.text, body.senses, body.feeling))
+          return respond(
+            saveRecord(body.student_id, body.record_id, body.date, body.text, body.senses, body.feeling, body.photo_base64, body.photo_mime, body.remove_photo)
+          )
         case "deleteRecord":
           return respond(deleteRecord(body.student_id, body.record_id))
         case "react":
@@ -120,6 +123,12 @@ function getSheet(name, headers) {
     // すべてのセルを文字列として扱う。
     sheet.getRange(1, 1, sheet.getMaxRows(), headers.length).setNumberFormat("@")
     sheet.appendRow(headers)
+  } else if (sheet.getLastColumn() < headers.length) {
+    // 後から列を足したときは、足りない見出しを右に書き足す
+    const from = sheet.getLastColumn() + 1
+    const missing = headers.slice(from - 1)
+    sheet.getRange(1, from, sheet.getMaxRows(), missing.length).setNumberFormat("@")
+    sheet.getRange(1, from, 1, missing.length).setValues([missing])
   }
   return sheet
 }
@@ -258,6 +267,7 @@ function myRecordsOf(studentId) {
       text: String(r.text),
       senses: parseSenses(r.senses),
       feeling: String(r.feeling || ""),
+      photo_url: photoUrl(r.photo_id),
       created_at: toIsoStr(r.created_at),
     }))
 }
@@ -299,7 +309,8 @@ function touchStudent(student) {
 // ---------------- 記録(1日に何件でも) ----------------
 
 // recordId があれば、自分の記録の書き直し。なければ新しい記録。
-function saveRecord(studentId, recordId, dateStr, rawText, rawSenses, rawFeeling) {
+// 写真: photoBase64 があれば添える(書き直しなら差し替え)。removePhoto なら外す。どちらもなければ、今の写真のまま。
+function saveRecord(studentId, recordId, dateStr, rawText, rawSenses, rawFeeling, photoBase64, photoMime, removePhoto) {
   const student = findStudentById(studentId)
   if (!student) return { error: "student_not_found" }
 
@@ -316,17 +327,33 @@ function saveRecord(studentId, recordId, dateStr, rawText, rawSenses, rawFeeling
 
   const now = new Date().toISOString()
   const sheet = recordsSheet()
+  let record = null
   if (recordId) {
-    const record = readTable(sheet, RECORD_HEADERS).find((r) => String(r.id) === String(recordId))
+    record = readTable(sheet, RECORD_HEADERS).find((r) => String(r.id) === String(recordId))
     if (!record) return { error: "post_not_found" }
     if (String(record.student_id) !== String(student.id)) return { error: "not_yours" }
+  }
+
+  let photoId = ""
+  if (photoBase64) {
+    const saved = savePhoto(photoBase64, photoMime)
+    if (saved.error) return saved
+    photoId = saved.id
+  }
+
+  if (record) {
+    const oldPhotoId = String(record.photo_id || "")
+    if (photoId || removePhoto) {
+      setCell(sheet, RECORD_HEADERS, record._row, "photo_id", photoId)
+      trashPhoto(oldPhotoId)
+    }
     setCell(sheet, RECORD_HEADERS, record._row, "date", target)
     setCell(sheet, RECORD_HEADERS, record._row, "text", text)
     setCell(sheet, RECORD_HEADERS, record._row, "senses", senses)
     setCell(sheet, RECORD_HEADERS, record._row, "feeling", feeling)
     setCell(sheet, RECORD_HEADERS, record._row, "updated_at", now)
   } else {
-    appendTextRow(sheet, [Utilities.getUuid(), student.id, student.display_name, target, text, senses, feeling, "{}", "", now, now])
+    appendTextRow(sheet, [Utilities.getUuid(), student.id, student.display_name, target, text, senses, feeling, "{}", "", now, now, photoId])
   }
   touchStudent(student)
   return formatStudent(findStudentById(studentId), true)
@@ -340,6 +367,7 @@ function deleteRecord(studentId, recordId) {
   if (!record) return { error: "post_not_found" }
   if (String(record.student_id) !== String(student.id)) return { error: "not_yours" }
   sheet.deleteRow(record._row)
+  trashPhoto(record.photo_id)
   touchStudent(student)
   return formatStudent(findStudentById(studentId), true)
 }
@@ -382,6 +410,7 @@ function getFeed(studentId) {
         text: String(p.text),
         senses: parseSenses(p.senses),
         feeling: String(p.feeling || ""),
+        photo_url: photoUrl(p.photo_id),
         counts: countsOf(reactions),
         mine: mineOf(reactions, String(student.id)),
         is_mine: String(p.student_id) === String(student.id),
@@ -457,6 +486,7 @@ function adminList(pin) {
         text: String(p.text),
         senses: parseSenses(p.senses),
         feeling: String(p.feeling || ""),
+        photo_url: photoUrl(p.photo_id),
         counts,
         hidden: String(p.hidden) === "1",
       }

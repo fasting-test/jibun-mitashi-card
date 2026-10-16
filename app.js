@@ -250,9 +250,17 @@ async function getStudentById(id) {
   return data && data.id ? data : null
 }
 
-// recordId を渡すと書き直し、空なら新しい記録
-async function saveRecord(studentId, recordId, date, text, senses, feeling) {
-  return apiPost({ action: "saveRecord", student_id: studentId, record_id: recordId || "", date, text, senses, feeling })
+// recordId を渡すと書き直し、空なら新しい記録。
+// photo(compressPhoto の結果)を渡すと写真を添える/差し替える。removePhoto が true なら写真を外す。
+async function saveRecord(studentId, recordId, date, text, senses, feeling, photo, removePhoto) {
+  const body = { action: "saveRecord", student_id: studentId, record_id: recordId || "", date, text, senses, feeling }
+  if (photo) {
+    body.photo_base64 = photo.base64
+    body.photo_mime = photo.mime
+  } else if (removePhoto) {
+    body.remove_photo = true
+  }
+  return apiPost(body)
 }
 
 async function deleteRecord(studentId, recordId) {
@@ -361,6 +369,22 @@ async function compressPhoto(file) {
   }
   if (dataUrl.length * 0.75 > PHOTO_MAX_BYTES) throw new Error(apiErrorMessage("photo_too_large"))
   return { base64: dataUrl.split(",")[1], mime: "image/jpeg", previewUrl: dataUrl }
+}
+
+// 投稿・記録に添えられた写真(タップすると大きく開く)
+function buildPostPhoto(url) {
+  const link = document.createElement("a")
+  link.href = url
+  link.target = "_blank"
+  link.rel = "noopener noreferrer"
+  link.className = "post-photo-link"
+  const img = document.createElement("img")
+  img.className = "post-photo"
+  img.src = url
+  img.alt = "添付された写真"
+  img.loading = "lazy"
+  link.appendChild(img)
+  return link
 }
 
 async function fetchGroupFeed(studentId) {

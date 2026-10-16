@@ -109,6 +109,13 @@
               </div>
             </div>
 
+            <div class="photo-row">
+              <label class="photo-pick" for="record-photo">📷 写真を添える</label>
+              <input id="record-photo" type="file" accept="image/*" hidden />
+              <button type="button" class="btn-link inline" id="record-photo-remove" hidden>写真を外す</button>
+            </div>
+            <img id="record-preview" class="photo-preview" alt="添付する写真のプレビュー" hidden />
+
             <div class="date-row">
               <label for="record-date">記録する日</label>
               <select id="record-date"></select>
@@ -271,7 +278,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="config.js?v=2"></script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
   <script>
     const REGISTER_DRAFT_KEY = STORAGE_PREFIX + "register_draft"
     const ADMIN_PIN_KEY = STORAGE_PREFIX + "admin_pin"
@@ -326,6 +333,9 @@
     const senseListEl = document.getElementById("sense-list")
     const feelingTextEl = document.getElementById("feeling-text")
     const recordDateEl = document.getElementById("record-date")
+    const recordPhotoInput = document.getElementById("record-photo")
+    const recordPhotoRemoveBtn = document.getElementById("record-photo-remove")
+    const recordPreviewEl = document.getElementById("record-preview")
     const postBtn = document.getElementById("post-btn")
     const cancelEditBtn = document.getElementById("cancel-edit-btn")
     const postErrorEl = document.getElementById("post-error")
@@ -340,6 +350,9 @@
     let selectedSenses = new Set()
     let editingId = null // 書き直し中の記録ID
     let isPosting = false
+    let recordPhoto = null // 新しく選んだ写真(compressPhoto の結果)
+    let editingPhotoUrl = "" // 書き直し中の記録に、もともと付いている写真
+    let removeEditingPhoto = false // 書き直し中に「写真を外す」を押した
 
     function lastDayOf(start) {
       return addDays(start, PROGRAM_LENGTH - 1)
@@ -581,6 +594,7 @@
       selectedSenses = new Set()
       sensesToggleEl.checked = false
       editingId = null
+      clearRecordPhoto()
       renderSenseList()
       renderDateOptions()
       saveRecordDraft(null)
@@ -602,6 +616,45 @@
       postErrorEl.hidden = false
     }
 
+    // ---- 記録に添える写真(任意・1枚) ----
+
+    function renderRecordPhoto() {
+      const url = recordPhoto ? recordPhoto.previewUrl : removeEditingPhoto ? "" : editingPhotoUrl
+      if (url) recordPreviewEl.src = url
+      else recordPreviewEl.removeAttribute("src")
+      recordPreviewEl.hidden = !url
+      recordPhotoRemoveBtn.hidden = !url
+    }
+
+    function clearRecordPhoto() {
+      recordPhoto = null
+      editingPhotoUrl = ""
+      removeEditingPhoto = false
+      recordPhotoInput.value = ""
+      renderRecordPhoto()
+    }
+
+    recordPhotoInput.addEventListener("change", async () => {
+      const file = recordPhotoInput.files && recordPhotoInput.files[0]
+      if (!file) return
+      postErrorEl.hidden = true
+      try {
+        recordPhoto = await compressPhoto(file)
+      } catch (err) {
+        recordPhoto = null
+        recordPhotoInput.value = ""
+        showPostError(err && err.message ? err.message : "写真を読み込めませんでした")
+      }
+      renderRecordPhoto()
+    })
+
+    recordPhotoRemoveBtn.addEventListener("click", () => {
+      recordPhoto = null
+      recordPhotoInput.value = ""
+      if (editingPhotoUrl) removeEditingPhoto = true
+      renderRecordPhoto()
+    })
+
     postBtn.addEventListener("click", async () => {
       if (isPosting) return
       const text = postTextEl.value.trim()
@@ -618,8 +671,10 @@
       isPosting = true
       postBtn.disabled = true
       postErrorEl.hidden = true
+      const btnLabel = postBtn.textContent
+      if (recordPhoto) postBtn.textContent = "写真を送っています..."
       try {
-        const updated = await saveRecord(student.id, editingId, recordDateEl.value, text, senses, feeling)
+        const updated = await saveRecord(student.id, editingId, recordDateEl.value, text, senses, feeling, recordPhoto, removeEditingPhoto)
         applyStudent(updated)
         clearForm()
         if (!wasEditing) fireConfetti()
@@ -630,6 +685,7 @@
       } finally {
         isPosting = false
         postBtn.disabled = false
+        if (postBtn.textContent === "写真を送っています...") postBtn.textContent = btnLabel
       }
     })
 
@@ -642,6 +698,9 @@
     // 自分の記録を、書き直し用にフォームへ戻す
     function startEdit(record) {
       editingId = record.id
+      clearRecordPhoto()
+      editingPhotoUrl = record.photo_url || ""
+      renderRecordPhoto()
       postTextEl.value = record.text
       feelingTextEl.value = record.feeling || ""
       selectedSenses = new Set(record.senses || [])
@@ -717,6 +776,7 @@
         feeling.textContent = record.feeling
         item.appendChild(feeling)
       }
+      if (record.photo_url) item.appendChild(buildPostPhoto(record.photo_url))
 
       const actions = document.createElement("div")
       actions.className = "record-actions"
@@ -806,6 +866,7 @@
         feeling.textContent = post.feeling
         item.appendChild(feeling)
       }
+      if (post.photo_url) item.appendChild(buildPostPhoto(post.photo_url))
 
       const bar = document.createElement("div")
       bar.className = "reaction-bar"
@@ -1086,20 +1147,7 @@
       body.textContent = post.text
       item.appendChild(body)
 
-      if (post.photo_url) {
-        const link = document.createElement("a")
-        link.href = post.photo_url
-        link.target = "_blank"
-        link.rel = "noopener noreferrer"
-        link.className = "post-photo-link"
-        const img = document.createElement("img")
-        img.className = "post-photo"
-        img.src = post.photo_url
-        img.alt = "添付された写真"
-        img.loading = "lazy"
-        link.appendChild(img)
-        item.appendChild(link)
-      }
+      if (post.photo_url) item.appendChild(buildPostPhoto(post.photo_url))
 
       const bar = document.createElement("div")
       bar.className = "reaction-bar"
@@ -1500,6 +1548,15 @@
         feeling.className = "record-feeling"
         feeling.textContent = p.feeling
         item.appendChild(feeling)
+      }
+      if (p.photo_url) {
+        const link = document.createElement("a")
+        link.href = p.photo_url
+        link.target = "_blank"
+        link.rel = "noopener noreferrer"
+        link.className = "btn-link inline"
+        link.textContent = "写真を開く"
+        item.appendChild(link)
       }
 
       const btn = document.createElement("button")

@@ -57,6 +57,7 @@ function createGas() {
         maxRows += n
       },
       getLastRow: () => data.length,
+      getLastColumn: () => Math.max(0, ...data.map((r) => r.reduce((last, v, i) => (v !== "" ? i + 1 : last), 0))),
       getDataRange: () => ({
         getValues: () => {
           pad()
