@@ -802,49 +802,7 @@ textarea:focus {
   display: none;
 }
 
-/* ================= 交流タブ ================= */
-
-.lead.compact {
-  margin-bottom: 24px;
-}
-
-.lead.compact h1 {
-  font-size: 21px;
-}
-
-.gate-btn {
-  margin-top: 16px;
-}
-
-.compose {
-  margin-bottom: 8px;
-}
-
-.kind-toggle {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.kind-btn {
-  flex: 1;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 9px 12px;
-  background: var(--surface-2);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.kind-btn.active {
-  background: var(--gradient-primary);
-  border-color: transparent;
-  color: var(--background);
-  box-shadow: var(--glow-shadow);
-}
+/* ================= 写真・コメント ================= */
 
 .photo-row {
   display: flex;
@@ -1217,6 +1175,32 @@ textarea:focus {
   display: flex;
   gap: 8px;
   margin-top: 6px;
+}
+
+/* 自分の記録についた、リアクションとコメント */
+.record-responses {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--gridline);
+}
+
+.response-counts {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.response-toggle {
+  margin-top: 4px;
+  padding-left: 0;
+}
+
+.record-responses .comments {
+  margin-top: 6px;
+  padding-top: 0;
+  border-top: none;
 }
 
 /* --- 管理者: 期の確認待ち --- */

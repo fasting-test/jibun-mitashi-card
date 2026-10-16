@@ -224,12 +224,11 @@ function apiErrorMessage(error) {
     text_too_long: `${MAX_TEXT_LENGTH}文字以内で入力してください`,
     own_post: "自分の記録にはリアクションできません",
     no_group: "まだ期(グループ)の設定がありません。運営にお知らせください",
-    not_open: `${formatMdWeekday(PROGRAM_START_DATE)}のオープン後に投稿できます`,
-    invalid_kind: "投稿の種類を選んでください",
+    comment_too_long: "コメントは200文字以内で入力してください",
     invalid_photo: "写真はJPEG・PNG・WebPの画像を選んでください",
     photo_too_large: "写真が大きすぎます。別の写真でお試しください",
     comment_not_found: "このコメントは見つかりませんでした",
-    not_yours: "自分の投稿・コメントだけ削除できます",
+    not_yours: "自分の記録・コメントだけ書き直し・削除できます",
     wrong_pin: "合言葉が違います",
     admin_pin_not_set: "管理者の合言葉がまだ設定されていません(Apps Scriptのスクリプトプロパティ ADMIN_PIN を設定してください)",
   }
@@ -267,9 +266,9 @@ async function deleteRecord(studentId, recordId) {
   return apiPost({ action: "deleteRecord", student_id: studentId, record_id: recordId })
 }
 
+// 同じ期のメンバーの記録とコメント。{ group, pending, posts, comments } が返る
 async function fetchFeed(studentId) {
-  const data = await apiGet({ action: "feed", id: studentId })
-  return data.posts || []
+  return apiGet({ action: "feed", id: studentId })
 }
 
 async function reactToPost(studentId, postId, type) {
@@ -290,16 +289,9 @@ function fireConfetti() {
   confetti({ particleCount: 30, spread: 100, startVelocity: 25, origin: { y: 0.55 }, colors, scalar: 0.7 })
 }
 
-// ================= 交流の場(期ごとのグループ) =================
+// ================= コメントと写真 =================
 
-// 投稿の種類(Code.gs の FEED_KINDS と合わせる)
-const FEED_KINDS = [
-  { kind: "好き", emoji: "💛", hint: "例: 最近ハマっているもの、好きな場所や時間" },
-  { kind: "気づき", emoji: "💡", hint: "例: 今日気づいたこと、やってみて感じたこと" },
-]
-const MAX_POST_LENGTH = 500
 const MAX_COMMENT_LENGTH = 200
-const COMMUNITY_DRAFT_KEY = STORAGE_PREFIX + "community_draft"
 
 // 写真は、送る前にスマホの中で小さくする(長辺1280px・JPEG)。
 // サーバー側の上限(1.5MB)に収まるよう、画質を少しずつ下げて調整する。
@@ -313,23 +305,6 @@ function formatDateTime(iso) {
   const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
   const ymd = jst.toISOString().slice(0, 10)
   return `${formatMdWeekday(ymd)} ${String(jst.getUTCHours()).padStart(2, "0")}:${String(jst.getUTCMinutes()).padStart(2, "0")}`
-}
-
-function loadCommunityDraft() {
-  try {
-    return JSON.parse(localStorage.getItem(COMMUNITY_DRAFT_KEY) || "null")
-  } catch {
-    return null
-  }
-}
-
-function saveCommunityDraft(draft) {
-  try {
-    if (draft && draft.text) localStorage.setItem(COMMUNITY_DRAFT_KEY, JSON.stringify(draft))
-    else localStorage.removeItem(COMMUNITY_DRAFT_KEY)
-  } catch {
-    // 無視
-  }
 }
 
 function loadImageFromFile(file) {
@@ -387,41 +362,12 @@ function buildPostPhoto(url) {
   return link
 }
 
-async function fetchGroupFeed(studentId) {
-  return apiGet({ action: "groupFeed", id: studentId })
-}
-
-async function createFeedPost(studentId, kind, text, photo) {
-  const body = { action: "createFeedPost", student_id: studentId, kind, text }
-  if (photo) {
-    body.photo_base64 = photo.base64
-    body.photo_mime = photo.mime
-  }
-  return apiPost(body)
-}
-
-async function deleteFeedPost(studentId, postId) {
-  return apiPost({ action: "deleteFeedPost", student_id: studentId, post_id: postId })
-}
-
 async function addComment(studentId, postId, parentId, text) {
   return apiPost({ action: "addComment", student_id: studentId, post_id: postId, parent_id: parentId || "", text })
 }
 
 async function deleteComment(studentId, commentId) {
   return apiPost({ action: "deleteComment", student_id: studentId, comment_id: commentId })
-}
-
-async function reactToFeedPost(studentId, postId, type) {
-  return apiPost({ action: "reactFeed", student_id: studentId, post_id: postId, type })
-}
-
-async function adminFeed(pin) {
-  return apiPost({ action: "adminFeed", pin })
-}
-
-async function adminHideFeedPost(pin, postId, hidden) {
-  return apiPost({ action: "hideFeedPost", pin, post_id: postId, hidden })
 }
 
 async function adminHideComment(pin, commentId, hidden) {

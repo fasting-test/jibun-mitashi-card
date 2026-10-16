@@ -27,19 +27,15 @@ const MAX_FEELING_LENGTH = 300
 // 五感(画面側の app.js の SENSES と合わせる)。記録には「smell,taste」のように保存する
 const SENSE_TYPES = ["smell", "touch", "taste", "hearing", "sight"]
 
-// 交流の場(期ごとのグループ)
-const FEED_SHEET = "feed_posts"
+// 記録へのコメントと、期(グループ)の名簿。みんなの記録は、同じ期のメンバーだけで見せ合う。
+// (交流タブの投稿に使っていた feed_posts シートは、もう使わない。comments シートの post_id は記録のID)
 const COMMENTS_SHEET = "comments"
 const ROSTER_SHEET = "roster"
-const FEED_HEADERS = ["id", "student_id", "display_name", "group", "kind", "text", "photo_id", "reactions", "hidden", "created_at"]
 const COMMENT_HEADERS = ["id", "post_id", "parent_id", "student_id", "display_name", "group", "text", "hidden", "created_at"]
 const ROSTER_HEADERS = ["display_name", "group"]
-const FEED_KINDS = ["好き", "気づき"]
-const MAX_POST_LENGTH = 500
 const MAX_COMMENT_LENGTH = 200
 const MAX_PHOTO_BYTES = 1500000
 const PHOTO_FOLDER_NAME = "自分満たし写真"
-const GROUP_FEED_LIMIT = 100
 // リアクションの種類(画面側の app.js の REACTIONS と合わせる)
 const REACTION_TYPES = ["like", "understand", "energy", "try"]
 const FEED_LIMIT = 200
@@ -49,7 +45,6 @@ function doGet(e) {
     const action = e.parameter.action || "get"
     if (action === "get") return respond(getStudentById(e.parameter.id) || { error: "not_found" })
     if (action === "feed") return respond(getFeed(e.parameter.id))
-    if (action === "groupFeed") return respond(getGroupFeed(e.parameter.id))
     return respond({ error: "unknown_action" })
   } catch (err) {
     return respond({ error: String(err) })
@@ -73,20 +68,10 @@ function doPost(e) {
           return respond(deleteRecord(body.student_id, body.record_id))
         case "react":
           return respond(reactToRecord(body.student_id, body.post_id, body.type))
-        case "createFeedPost":
-          return respond(createFeedPost(body.student_id, body.kind, body.text, body.photo_base64, body.photo_mime))
-        case "deleteFeedPost":
-          return respond(deleteFeedPost(body.student_id, body.post_id))
         case "addComment":
           return respond(addComment(body.student_id, body.post_id, body.parent_id, body.text))
         case "deleteComment":
           return respond(deleteComment(body.student_id, body.comment_id))
-        case "reactFeed":
-          return respond(reactToFeedPost(body.student_id, body.post_id, body.type))
-        case "adminFeed":
-          return respond(adminFeed(body.pin))
-        case "hideFeedPost":
-          return respond(hideFeedPost(body.pin, body.post_id, body.hidden))
         case "hideComment":
           return respond(hideComment(body.pin, body.comment_id, body.hidden))
         case "setGroup":
@@ -256,20 +241,24 @@ function byNewest(a, b) {
   return toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1
 }
 
-// 本人の記録の一覧(振り返り用)
+// 本人の記録の一覧(振り返り用)。もらったリアクションの数と、コメントも一緒に返す
 function myRecordsOf(studentId) {
-  return readTable(recordsSheet(), RECORD_HEADERS)
-    .filter((r) => String(r.student_id) === String(studentId))
-    .sort(byNewest)
-    .map((r) => ({
-      id: r.id,
-      date: toDateStr(r.date),
-      text: String(r.text),
-      senses: parseSenses(r.senses),
-      feeling: String(r.feeling || ""),
-      photo_url: photoUrl(r.photo_id),
-      created_at: toIsoStr(r.created_at),
-    }))
+  const sid = String(studentId)
+  const records = readTable(recordsSheet(), RECORD_HEADERS).filter((r) => String(r.student_id) === sid)
+  const authors = {}
+  records.forEach((r) => (authors[String(r.id)] = sid))
+  const comments = visibleCommentsFor(authors, sid)
+  return records.sort(byNewest).map((r) => ({
+    id: r.id,
+    date: toDateStr(r.date),
+    text: String(r.text),
+    senses: parseSenses(r.senses),
+    feeling: String(r.feeling || ""),
+    photo_url: photoUrl(r.photo_id),
+    counts: countsOf(parseReactions(r.reactions)),
+    comments: comments[String(r.id)] || [],
+    created_at: toIsoStr(r.created_at),
+  }))
 }
 
 function formatStudent(obj, withRecords) {
@@ -366,6 +355,7 @@ function deleteRecord(studentId, recordId) {
   const record = readTable(sheet, RECORD_HEADERS).find((r) => String(r.id) === String(recordId))
   if (!record) return { error: "post_not_found" }
   if (String(record.student_id) !== String(student.id)) return { error: "not_yours" }
+  deleteCommentsOf(recordId)
   sheet.deleteRow(record._row)
   trashPhoto(record.photo_id)
   touchStudent(student)
@@ -393,16 +383,29 @@ function mineOf(reactions, studentId) {
   return REACTION_TYPES.filter((t) => Array.isArray(reactions[t]) && reactions[t].indexOf(studentId) !== -1)
 }
 
-// 投稿者の名前・IDは返さない(匿名)。自分の投稿かどうかだけ is_mine で伝える。
+// 同じ期のメンバーの記録と、そのコメントを返す。投稿者の名前・IDは返さない(匿名)。
+// 自分の記録かどうかだけ is_mine で伝える。期が決まっていない人には、何も返さない。
 function getFeed(studentId) {
   const student = findStudentById(studentId)
   if (!student) return { error: "not_found" }
+  const roster = rosterEntries()
+  const info = resolveGroup(student.display_name, roster)
+  const group = info.group
+  // 確認待ち(名簿に似た名前はあるが確定していない)かどうかも伝える
+  if (!group) return { group: "", pending: !!info.candidate, posts: [], comments: {} }
 
+  const sid = String(student.id)
+  const groupByName = groupLookup(roster)
   const posts = readTable(recordsSheet(), RECORD_HEADERS)
-    .filter((p) => String(p.hidden) !== "1")
+    .filter((p) => String(p.hidden) !== "1" && groupByName(p.display_name) === group)
     .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
     .slice(0, FEED_LIMIT)
-    .map((p) => {
+  const authors = {}
+  posts.forEach((p) => (authors[String(p.id)] = String(p.student_id)))
+
+  return {
+    group,
+    posts: posts.map((p) => {
       const reactions = parseReactions(p.reactions)
       return {
         id: p.id,
@@ -411,24 +414,36 @@ function getFeed(studentId) {
         senses: parseSenses(p.senses),
         feeling: String(p.feeling || ""),
         photo_url: photoUrl(p.photo_id),
+        created_at: toIsoStr(p.created_at),
         counts: countsOf(reactions),
-        mine: mineOf(reactions, String(student.id)),
-        is_mine: String(p.student_id) === String(student.id),
+        mine: mineOf(reactions, sid),
+        is_mine: String(p.student_id) === sid,
       }
-    })
-  return { posts }
+    }),
+    comments: visibleCommentsFor(authors, sid),
+  }
+}
+
+// 記録を見られる(リアクション・コメントできる)のは、記録した人と同じ期のメンバーだけ。
+// 問題なければ { member, record } を返す。
+function requireSameGroupRecord(studentId, recordId) {
+  const member = requireGroupMember(studentId)
+  if (member.error) return member
+  const record = readTable(recordsSheet(), RECORD_HEADERS).find((r) => String(r.id) === String(recordId))
+  if (!record || String(record.hidden) === "1") return { error: "post_not_found" }
+  if (groupOf(record.display_name) !== member.group) return { error: "post_not_found" }
+  return { member, record }
 }
 
 function reactToRecord(studentId, postId, type) {
-  const student = findStudentById(studentId)
-  if (!student) return { error: "student_not_found" }
   if (REACTION_TYPES.indexOf(type) === -1) return { error: "invalid_reaction" }
-
-  const sheet = recordsSheet()
-  const post = readTable(sheet, RECORD_HEADERS).find((p) => String(p.id) === String(postId))
-  if (!post || String(post.hidden) === "1") return { error: "post_not_found" }
+  const found = requireSameGroupRecord(studentId, postId)
+  if (found.error) return found
+  const student = found.member.student
+  const post = found.record
   if (String(post.student_id) === String(student.id)) return { error: "own_post" }
 
+  const sheet = recordsSheet()
   const reactions = parseReactions(post.reactions)
   const list = Array.isArray(reactions[type]) ? reactions[type] : []
   const sid = String(student.id)
@@ -475,6 +490,21 @@ function adminList(pin) {
     student.record_days = Object.keys(st.days).length
     return student
   })
+  const commentsByPost = {}
+  readTable(commentsSheet(), COMMENT_HEADERS)
+    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? -1 : 1))
+    .forEach((c) => {
+      const key = String(c.post_id)
+      if (!commentsByPost[key]) commentsByPost[key] = []
+      commentsByPost[key].push({
+        id: c.id,
+        parent_id: c.parent_id ? String(c.parent_id) : "",
+        display_name: c.display_name,
+        text: String(c.text),
+        hidden: String(c.hidden) === "1",
+      })
+    })
+  const groupByName = groupLookup(roster)
   const posts = records
     .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
     .map((p) => {
@@ -482,6 +512,8 @@ function adminList(pin) {
       return {
         id: p.id,
         display_name: p.display_name,
+        group: groupByName(p.display_name),
+        comments: commentsByPost[String(p.id)] || [],
         date: toDateStr(p.date),
         text: String(p.text),
         senses: parseSenses(p.senses),
@@ -491,7 +523,8 @@ function adminList(pin) {
         hidden: String(p.hidden) === "1",
       }
     })
-  return { students, posts }
+  const rosterRows = readTable(rosterSheet(), ROSTER_HEADERS).map((r) => ({ display_name: r.display_name, group: String(r.group) }))
+  return { students, posts, roster: rosterRows }
 }
 
 function hideRecord(pin, postId, hidden) {
@@ -505,13 +538,9 @@ function hideRecord(pin, postId, hidden) {
   return { post_id: post.id, hidden: !!hidden }
 }
 
-// ================= 交流の場(期ごとのグループ) =================
-// 投稿・コメント・返信はすべて匿名。見られるのは、自分と同じ期のメンバーの投稿だけ。
+// ================= 期(グループ)とコメント =================
+// みんなの記録・リアクション・コメントは、すべて匿名。見られるのは、自分と同じ期のメンバーの記録だけ。
 // 期は、スプレッドシートの roster シート(呼び名 → 期)から、受講生の名前で判定する。
-
-function feedSheet() {
-  return getSheet(FEED_SHEET, FEED_HEADERS)
-}
 
 function commentsSheet() {
   return getSheet(COMMENTS_SHEET, COMMENT_HEADERS)
@@ -563,6 +592,16 @@ function resolveGroup(displayName, entries) {
 // 確定した期だけを返す(確認待ちは "")
 function groupOf(displayName) {
   return resolveGroup(displayName, rosterEntries()).group
+}
+
+// 名前 → 確定した期。たくさんの記録の期を調べるとき用(同じ名前は1回だけ判定する)
+function groupLookup(roster) {
+  const cache = {}
+  return (name) => {
+    const key = String(name)
+    if (!(key in cache)) cache[key] = resolveGroup(key, roster).group
+    return cache[key]
+  }
 }
 
 function photoUrl(photoId) {
@@ -620,59 +659,45 @@ function requireGroupMember(studentId) {
   return { student, group }
 }
 
-function createFeedPost(studentId, kind, rawText, photoBase64, photoMime) {
-  const member = requireGroupMember(studentId)
-  if (member.error) return member
-  if (todayStr() < PROGRAM_START_DATE) return { error: "not_open" }
-  if (FEED_KINDS.indexOf(kind) === -1) return { error: "invalid_kind" }
-
-  const text = String(rawText || "").trim()
-  if (!text) return { error: "empty_text" }
-  if (text.length > MAX_POST_LENGTH) return { error: "text_too_long" }
-
-  let photoId = ""
-  if (photoBase64) {
-    const saved = savePhoto(photoBase64, photoMime)
-    if (saved.error) return saved
-    photoId = saved.id
-  }
-
-  const id = Utilities.getUuid()
-  const now = new Date().toISOString()
-  appendTextRow(feedSheet(), [id, member.student.id, member.student.display_name, member.group, kind, text, photoId, "{}", "", now])
-  return { post_id: id }
+// 記録のコメント(非表示のものを除く)を、記録IDごとにまとめる。
+// authors は { 記録ID: 記録した人のID }。見る人(viewerId)から見た is_mine / is_author を付ける。
+function visibleCommentsFor(authors, viewerId) {
+  const comments = {}
+  readTable(commentsSheet(), COMMENT_HEADERS)
+    .filter((c) => authors[String(c.post_id)] !== undefined && String(c.hidden) !== "1")
+    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? -1 : 1))
+    .forEach((c) => {
+      const key = String(c.post_id)
+      if (!comments[key]) comments[key] = []
+      comments[key].push({
+        id: c.id,
+        parent_id: c.parent_id ? String(c.parent_id) : "",
+        text: String(c.text),
+        created_at: toIsoStr(c.created_at),
+        is_mine: String(c.student_id) === viewerId,
+        is_author: String(c.student_id) === authors[key],
+      })
+    })
+  return comments
 }
 
-function deleteFeedPost(studentId, postId) {
-  const student = findStudentById(studentId)
-  if (!student) return { error: "student_not_found" }
-  const sheet = feedSheet()
-  const post = readTable(sheet, FEED_HEADERS).find((p) => String(p.id) === String(postId))
-  if (!post) return { error: "post_not_found" }
-  if (String(post.student_id) !== String(student.id)) return { error: "not_yours" }
-
-  // この投稿へのコメントと返信も一緒に消す(下の行から消して、行番号がずれないようにする)
-  const csheet = commentsSheet()
-  readTable(csheet, COMMENT_HEADERS)
-    .filter((c) => String(c.post_id) === String(postId))
-    .sort((a, b) => b._row - a._row)
-    .forEach((c) => csheet.deleteRow(c._row))
-  sheet.deleteRow(post._row)
-  trashPhoto(post.photo_id)
-  return { post_id: postId }
+// 記録を消すときに、その記録へのコメントと返信も消す(下の行から消して、行番号がずれないようにする)
+function deleteCommentsOf(recordId) {
+  const sheet = commentsSheet()
+  readTable(sheet, COMMENT_HEADERS)
+    .filter((c) => String(c.post_id) === String(recordId))
+    .sort((x, y) => y._row - x._row)
+    .forEach((c) => sheet.deleteRow(c._row))
 }
 
 function addComment(studentId, postId, parentId, rawText) {
-  const member = requireGroupMember(studentId)
-  if (member.error) return member
-
   const text = String(rawText || "").trim()
   if (!text) return { error: "empty_text" }
-  if (text.length > MAX_COMMENT_LENGTH) return { error: "text_too_long" }
+  if (text.length > MAX_COMMENT_LENGTH) return { error: "comment_too_long" }
 
-  const post = readTable(feedSheet(), FEED_HEADERS).find((p) => String(p.id) === String(postId))
-  if (!post || String(post.hidden) === "1") return { error: "post_not_found" }
-  if (String(post.group) !== member.group) return { error: "no_group" }
+  const found = requireSameGroupRecord(studentId, postId)
+  if (found.error) return found
+  const member = found.member
 
   const comments = readTable(commentsSheet(), COMMENT_HEADERS)
   if (parentId) {
@@ -705,130 +730,7 @@ function deleteComment(studentId, commentId) {
   return { comment_id: commentId }
 }
 
-function reactToFeedPost(studentId, postId, type) {
-  const member = requireGroupMember(studentId)
-  if (member.error) return member
-  if (REACTION_TYPES.indexOf(type) === -1) return { error: "invalid_reaction" }
-
-  const sheet = feedSheet()
-  const post = readTable(sheet, FEED_HEADERS).find((p) => String(p.id) === String(postId))
-  if (!post || String(post.hidden) === "1") return { error: "post_not_found" }
-  if (String(post.group) !== member.group) return { error: "no_group" }
-  if (String(post.student_id) === String(member.student.id)) return { error: "own_post" }
-
-  const reactions = parseReactions(post.reactions)
-  const list = Array.isArray(reactions[type]) ? reactions[type] : []
-  const sid = String(member.student.id)
-  const idx = list.indexOf(sid)
-  if (idx >= 0) list.splice(idx, 1)
-  else list.push(sid)
-  reactions[type] = list
-  setCell(sheet, FEED_HEADERS, post._row, "reactions", JSON.stringify(reactions))
-  return { post_id: post.id, counts: countsOf(reactions), mine: mineOf(reactions, sid) }
-}
-
-// 自分の期の投稿とコメントを返す。投稿者の名前・IDは返さない(匿名)。
-function getGroupFeed(studentId) {
-  const student = findStudentById(studentId)
-  if (!student) return { error: "not_found" }
-  const info = resolveGroup(student.display_name, rosterEntries())
-  const group = info.group
-  // 確認待ち(名簿に似た名前はあるが確定していない)かどうかも伝える
-  if (!group) return { group: "", pending: !!info.candidate, posts: [], comments: {} }
-
-  const sid = String(student.id)
-  const posts = readTable(feedSheet(), FEED_HEADERS)
-    .filter((p) => String(p.group) === group && String(p.hidden) !== "1")
-    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
-    .slice(0, GROUP_FEED_LIMIT)
-  const authors = {}
-  posts.forEach((p) => (authors[String(p.id)] = String(p.student_id)))
-
-  const comments = {}
-  readTable(commentsSheet(), COMMENT_HEADERS)
-    .filter((c) => authors[String(c.post_id)] !== undefined && String(c.hidden) !== "1")
-    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? -1 : 1))
-    .forEach((c) => {
-      const key = String(c.post_id)
-      if (!comments[key]) comments[key] = []
-      comments[key].push({
-        id: c.id,
-        parent_id: c.parent_id ? String(c.parent_id) : "",
-        text: String(c.text),
-        created_at: toIsoStr(c.created_at),
-        is_mine: String(c.student_id) === sid,
-        is_author: String(c.student_id) === authors[key],
-      })
-    })
-
-  return {
-    group,
-    posts: posts.map((p) => {
-      const reactions = parseReactions(p.reactions)
-      return {
-        id: p.id,
-        kind: p.kind,
-        text: String(p.text),
-        photo_url: photoUrl(p.photo_id),
-        created_at: toIsoStr(p.created_at),
-        counts: countsOf(reactions),
-        mine: mineOf(reactions, sid),
-        is_mine: String(p.student_id) === sid,
-      }
-    }),
-    comments,
-  }
-}
-
-// ---------------- 交流の場: 管理者 ----------------
-
-function adminFeed(pin) {
-  const authError = checkAdmin(pin)
-  if (authError) return { error: authError }
-
-  const commentsByPost = {}
-  readTable(commentsSheet(), COMMENT_HEADERS)
-    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? -1 : 1))
-    .forEach((c) => {
-      const key = String(c.post_id)
-      if (!commentsByPost[key]) commentsByPost[key] = []
-      commentsByPost[key].push({
-        id: c.id,
-        parent_id: c.parent_id ? String(c.parent_id) : "",
-        display_name: c.display_name,
-        text: String(c.text),
-        hidden: String(c.hidden) === "1",
-      })
-    })
-
-  const posts = readTable(feedSheet(), FEED_HEADERS)
-    .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
-    .map((p) => ({
-      id: p.id,
-      group: p.group,
-      display_name: p.display_name,
-      kind: p.kind,
-      text: String(p.text),
-      photo_url: photoUrl(p.photo_id),
-      created_at: toIsoStr(p.created_at),
-      counts: countsOf(parseReactions(p.reactions)),
-      hidden: String(p.hidden) === "1",
-      comments: commentsByPost[String(p.id)] || [],
-    }))
-
-  const roster = readTable(rosterSheet(), ROSTER_HEADERS).map((r) => ({ display_name: r.display_name, group: String(r.group) }))
-  return { posts, roster }
-}
-
-function hideFeedPost(pin, postId, hidden) {
-  const authError = checkAdmin(pin)
-  if (authError) return { error: authError }
-  const sheet = feedSheet()
-  const post = readTable(sheet, FEED_HEADERS).find((p) => String(p.id) === String(postId))
-  if (!post) return { error: "post_not_found" }
-  setCell(sheet, FEED_HEADERS, post._row, "hidden", hidden ? "1" : "")
-  return { post_id: post.id, hidden: !!hidden }
-}
+// ---------------- 管理者: コメントと名簿 ----------------
 
 function hideComment(pin, commentId, hidden) {
   const authError = checkAdmin(pin)
