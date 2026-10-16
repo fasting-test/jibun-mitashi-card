@@ -599,6 +599,14 @@ textarea:focus {
   color: var(--text-muted);
 }
 
+/* 「入力はここだけでOK」の一言(2回書く必要がないことを伝える) */
+.write-note-main {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
 .write-closed {
   margin: 0;
   padding: 16px 18px;
