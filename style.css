@@ -674,6 +674,47 @@ textarea:focus {
   color: var(--accent);
 }
 
+/* 記録した人の名前 */
+.feed-name {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* 運営の記録は、枠の色で見分けられるようにする */
+.feed-item.is-staff {
+  border-left-color: var(--text-secondary);
+}
+
+/* 運営だけに出る、期の絞り込み */
+.feed-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.filter-btn {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 16px;
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filter-btn.active {
+  background: var(--gradient-primary);
+  border-color: transparent;
+  color: var(--background);
+}
+
+.gate-btn {
+  margin-top: 16px;
+}
+
 .feed-text {
   margin: 6px 0 0;
   font-size: 15px;

@@ -38,7 +38,10 @@ const MAX_PHOTO_BYTES = 1500000
 const PHOTO_FOLDER_NAME = "自分満たし写真"
 // リアクションの種類(画面側の app.js の REACTIONS と合わせる)
 const REACTION_TYPES = ["like", "understand", "energy", "try"]
-const FEED_LIMIT = 200
+const FEED_LIMIT = 300
+// 名簿で期を「運営」にした人は、すべての期の記録を見て、いいね・コメントできる。運営の記録は、すべての期に表示される。
+// なりすまし防止のため、運営の名前でログインするときだけ、管理者の合言葉(ADMIN_PIN)が必要。
+const STAFF_GROUP = "運営"
 
 function doGet(e) {
   try {
@@ -59,7 +62,7 @@ function doPost(e) {
     try {
       switch (body.action) {
         case "registerOrResume":
-          return respond(registerOrResume(body.display_name))
+          return respond(registerOrResume(body.display_name, body.pin))
         case "saveRecord":
           return respond(
             saveRecord(body.student_id, body.record_id, body.date, body.text, body.senses, body.feeling, body.photo_base64, body.photo_mime, body.remove_photo)
@@ -247,7 +250,7 @@ function myRecordsOf(studentId) {
   const records = readTable(recordsSheet(), RECORD_HEADERS).filter((r) => String(r.student_id) === sid)
   const authors = {}
   records.forEach((r) => (authors[String(r.id)] = sid))
-  const comments = visibleCommentsFor(authors, sid)
+  const comments = visibleCommentsFor(authors, sid, groupLookup(rosterEntries()))
   return records.sort(byNewest).map((r) => ({
     id: r.id,
     date: toDateStr(r.date),
@@ -269,7 +272,10 @@ function formatStudent(obj, withRecords) {
     created_at: toIsoStr(obj.created_at),
     updated_at: toIsoStr(obj.updated_at),
   }
-  if (withRecords) student.my_records = myRecordsOf(obj.id)
+  if (withRecords) {
+    student.group = groupOf(obj.display_name)
+    student.my_records = myRecordsOf(obj.id)
+  }
   return student
 }
 
@@ -278,9 +284,14 @@ function getStudentById(id) {
   return student ? formatStudent(student, true) : null
 }
 
-function registerOrResume(displayName) {
+function registerOrResume(displayName, pin) {
   const name = String(displayName || "").trim().slice(0, 40)
   if (!name) return { error: "名前を入力してください" }
+  if (groupOf(name) === STAFF_GROUP) {
+    if (!pin) return { error: "staff_pin_required" }
+    const authError = checkAdmin(pin)
+    if (authError) return { error: authError }
+  }
 
   const existing = findStudentByName(name)
   if (existing) return formatStudent(existing, true)
@@ -362,7 +373,7 @@ function deleteRecord(studentId, recordId) {
   return formatStudent(findStudentById(studentId), true)
 }
 
-// ---------------- みんなの投稿(匿名)とリアクション ----------------
+// ---------------- みんなの記録とリアクション ----------------
 
 function parseReactions(cell) {
   try {
@@ -383,8 +394,15 @@ function mineOf(reactions, studentId) {
   return REACTION_TYPES.filter((t) => Array.isArray(reactions[t]) && reactions[t].indexOf(studentId) !== -1)
 }
 
-// 同じ期のメンバーの記録と、そのコメントを返す。投稿者の名前・IDは返さない(匿名)。
-// 自分の記録かどうかだけ is_mine で伝える。期が決まっていない人には、何も返さない。
+// 記録を見られるか。同じ期どうしと、運営(すべての期を見られ、運営の記録はすべての期に出る)。
+// 期が決まっていない人の記録は、誰にも出さない。
+function canSee(viewerGroup, authorGroup) {
+  if (!viewerGroup || !authorGroup) return false
+  return viewerGroup === STAFF_GROUP || authorGroup === STAFF_GROUP || viewerGroup === authorGroup
+}
+
+// 見られる記録と、そのコメントを返す。記録した人の名前と期も付ける(受講生のIDは返さない)。
+// 自分の記録かどうかは is_mine で伝える。期が決まっていない人には、何も返さない。
 function getFeed(studentId) {
   const student = findStudentById(studentId)
   if (!student) return { error: "not_found" }
@@ -397,7 +415,7 @@ function getFeed(studentId) {
   const sid = String(student.id)
   const groupByName = groupLookup(roster)
   const posts = readTable(recordsSheet(), RECORD_HEADERS)
-    .filter((p) => String(p.hidden) !== "1" && groupByName(p.display_name) === group)
+    .filter((p) => String(p.hidden) !== "1" && canSee(group, groupByName(p.display_name)))
     .sort((a, b) => (toIsoStr(a.created_at) < toIsoStr(b.created_at) ? 1 : -1))
     .slice(0, FEED_LIMIT)
   const authors = {}
@@ -409,6 +427,8 @@ function getFeed(studentId) {
       const reactions = parseReactions(p.reactions)
       return {
         id: p.id,
+        display_name: String(p.display_name),
+        group: groupByName(p.display_name),
         date: toDateStr(p.date),
         text: String(p.text),
         senses: parseSenses(p.senses),
@@ -420,18 +440,18 @@ function getFeed(studentId) {
         is_mine: String(p.student_id) === sid,
       }
     }),
-    comments: visibleCommentsFor(authors, sid),
+    comments: visibleCommentsFor(authors, sid, groupByName),
   }
 }
 
-// 記録を見られる(リアクション・コメントできる)のは、記録した人と同じ期のメンバーだけ。
+// 記録を見られる(リアクション・コメントできる)のは、canSee で見られる人だけ。
 // 問題なければ { member, record } を返す。
 function requireSameGroupRecord(studentId, recordId) {
   const member = requireGroupMember(studentId)
   if (member.error) return member
   const record = readTable(recordsSheet(), RECORD_HEADERS).find((r) => String(r.id) === String(recordId))
   if (!record || String(record.hidden) === "1") return { error: "post_not_found" }
-  if (groupOf(record.display_name) !== member.group) return { error: "post_not_found" }
+  if (!canSee(member.group, groupOf(record.display_name))) return { error: "post_not_found" }
   return { member, record }
 }
 
@@ -539,7 +559,7 @@ function hideRecord(pin, postId, hidden) {
 }
 
 // ================= 期(グループ)とコメント =================
-// みんなの記録・リアクション・コメントは、すべて匿名。見られるのは、自分と同じ期のメンバーの記録だけ。
+// みんなの記録・コメントには、名前が出る。見られるのは、自分と同じ期のメンバーと、運営の記録だけ。
 // 期は、スプレッドシートの roster シート(呼び名 → 期)から、受講生の名前で判定する。
 
 function commentsSheet() {
@@ -659,9 +679,9 @@ function requireGroupMember(studentId) {
   return { student, group }
 }
 
-// 記録のコメント(非表示のものを除く)を、記録IDごとにまとめる。
+// 記録のコメント(非表示のものを除く)を、記録IDごとにまとめる。書いた人の名前と期も付ける。
 // authors は { 記録ID: 記録した人のID }。見る人(viewerId)から見た is_mine / is_author を付ける。
-function visibleCommentsFor(authors, viewerId) {
+function visibleCommentsFor(authors, viewerId, groupByName) {
   const comments = {}
   readTable(commentsSheet(), COMMENT_HEADERS)
     .filter((c) => authors[String(c.post_id)] !== undefined && String(c.hidden) !== "1")
@@ -672,6 +692,8 @@ function visibleCommentsFor(authors, viewerId) {
       comments[key].push({
         id: c.id,
         parent_id: c.parent_id ? String(c.parent_id) : "",
+        display_name: String(c.display_name),
+        group: groupByName(c.display_name),
         text: String(c.text),
         created_at: toIsoStr(c.created_at),
         is_mine: String(c.student_id) === viewerId,

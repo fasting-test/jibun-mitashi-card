@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=12" />
+  <link rel="stylesheet" href="style.css?v=13" />
 </head>
 <body>
   <main id="main-el">
@@ -22,6 +22,7 @@
 
     <div class="tab-bar">
       <button type="button" id="tab-btn-student" class="active">わたしの記録</button>
+      <button type="button" id="tab-btn-feed">みんなの投稿</button>
       <button type="button" id="tab-btn-admin">管理者</button>
     </div>
 
@@ -58,13 +59,19 @@
             <ul class="name-notice-list">
               <li>スマホとパソコンを両方使う場合も、同じ名前を入れれば続きから記録できます</li>
               <li>名前が1文字でも違うと、別の記録として扱われてしまいます</li>
-              <li>書いた内容は、お名前なしの匿名で、同じ期のメンバーの画面に表示されます</li>
+              <li>書いた内容は、お名前つきで、同じ期のメンバーと運営の画面に表示されます</li>
             </ul>
           </div>
 
           <div class="field">
             <label for="display_name">お名前(マイページの呼び名)</label>
             <input id="display_name" name="display_name" type="text" required maxlength="40" placeholder="例: マイページの呼び名そのまま" />
+          </div>
+
+          <!-- 運営の名前のときだけ出る -->
+          <div class="field" id="staff-pin-field" hidden>
+            <label for="staff-pin">管理者の合言葉(運営の方だけ)</label>
+            <input id="staff-pin" type="password" autocomplete="off" placeholder="合言葉" />
           </div>
 
           <button type="submit" class="btn-primary" id="submit-btn">はじめる / 続きから</button>
@@ -122,8 +129,8 @@
 
             <button type="button" class="btn-primary" id="post-btn">記録する</button>
             <button type="button" class="btn-link" id="cancel-edit-btn" hidden>書き直しをやめる</button>
-            <p class="write-note write-note-main">入力はここだけでOK。記録すると、下の「わたしの記録」と「みんなの『好き』」の両方に表示されます。</p>
-            <p class="write-note">※ お名前は出ません。同じ期のメンバーに表示され、リアクションやコメントがもらえます。1日に何件でも記録できます。</p>
+            <p class="write-note write-note-main">入力はここだけでOK。記録すると、下の「わたしの記録」と、上の「みんなの投稿」タブの両方に表示されます。</p>
+            <p class="write-note">※ お名前つきで、同じ期のメンバーと運営に表示され、リアクションやコメントがもらえます。1日に何件でも記録できます。</p>
             <p class="error" id="post-error" hidden></p>
           </div>
           <p class="write-closed" id="write-closed" hidden></p>
@@ -140,23 +147,30 @@
           <p class="feed-empty" id="my-records-empty" hidden>まだ記録がありません。今日の小さな「好き」から始めよう。</p>
         </section>
 
-        <div class="diamond-divider"><span class="diamond"></span></div>
-
-        <!-- みんなの記録(同じ期のメンバーだけ) -->
-        <section class="feed" id="feed">
-          <h2 class="feed-title">みんなの「好き」</h2>
-          <p class="feed-sub" id="feed-sub">同じ期のメンバーの記録です。お名前は出ません。リアクションやコメントを送ろう。</p>
-          <p class="write-closed" id="feed-gate" hidden></p>
-          <div id="feed-list"></div>
-          <p class="loading small" id="feed-loading">読み込み中...</p>
-          <p class="feed-empty" id="feed-empty" hidden>まだ記録がありません。最初の1人になろう!</p>
-          <p class="error" id="feed-error" hidden></p>
-          <button type="button" class="btn-link" id="feed-more-btn" hidden>もっと見る</button>
-          <button type="button" class="btn-link" id="feed-reload-btn">最新の記録に更新する</button>
-        </section>
-
         <button type="button" class="btn-link" id="back-to-login-btn">ログイン画面に戻る</button>
       </div>
+    </div>
+
+    <!-- ==================== みんなの投稿タブ(同じ期のメンバーと運営) ==================== -->
+    <div id="tab-panel-feed" class="tab-panel" hidden>
+      <!-- 使えない状態(オープン前・未ログイン)のお知らせ -->
+      <div id="feed-tab-gate" hidden>
+        <p class="write-closed" id="feed-tab-gate-text"></p>
+        <button type="button" class="btn-primary gate-btn" id="feed-tab-gate-btn" hidden>わたしの記録へ</button>
+      </div>
+
+      <section class="feed" id="feed" hidden>
+        <h2 class="feed-title">みんなの投稿</h2>
+        <p class="feed-sub" id="feed-sub"></p>
+        <div class="feed-filter" id="feed-filter" role="group" aria-label="期で絞り込む" hidden></div>
+        <p class="write-closed" id="feed-gate" hidden></p>
+        <div id="feed-list"></div>
+        <p class="loading small" id="feed-loading">読み込み中...</p>
+        <p class="feed-empty" id="feed-empty" hidden>まだ記録がありません。最初の1人になろう!</p>
+        <p class="error" id="feed-error" hidden></p>
+        <button type="button" class="btn-link" id="feed-more-btn" hidden>もっと見る</button>
+        <button type="button" class="btn-link" id="feed-reload-btn">最新の記録に更新する</button>
+      </section>
     </div>
 
     <!-- ==================== 管理者タブ ==================== -->
@@ -204,6 +218,7 @@
 
           <h2 class="admin-section-title">期(グループ)の設定</h2>
           <p class="admin-summary">記録は、同じ期のメンバーだけで見せ合います。受講生の「呼び名」と期を登録してください(呼び名は、受講生が入力する名前と、まったく同じにします)。</p>
+          <p class="admin-summary">運営として参加する人は、「1人登録」で期を「運営」にしてください。すべての期の記録を見て、いいね・コメントでき、運営の記録はすべての期に表示されます。運営の名前でログインするときは、この管理者の合言葉が必要です。</p>
           <div class="admin-roster">
             <label for="roster-text">まとめて登録(1行に1人、「呼び名,期」の形。マイページの一覧をコピーして貼り付けできます)</label>
             <textarea id="roster-text" rows="4" placeholder="例:&#10;はなちゃん,3期&#10;さくら,4期"></textarea>
@@ -227,7 +242,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="config.js?v=2"></script>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
   <script>
     const REGISTER_DRAFT_KEY = STORAGE_PREFIX + "register_draft"
     const ADMIN_PIN_KEY = STORAGE_PREFIX + "admin_pin"
@@ -237,6 +252,7 @@
     document.getElementById("demo-banner").hidden = !IS_DEMO
     const tabs = {
       student: { btn: document.getElementById("tab-btn-student"), panel: document.getElementById("tab-panel-student") },
+      feed: { btn: document.getElementById("tab-btn-feed"), panel: document.getElementById("tab-panel-feed") },
       admin: { btn: document.getElementById("tab-btn-admin"), panel: document.getElementById("tab-panel-admin") },
     }
 
@@ -249,6 +265,7 @@
       })
       mainEl.classList.toggle("wide", tab === "admin")
       if (tab === "admin") initAdminTab()
+      if (tab === "feed") initFeedTab()
       window.scrollTo(0, 0)
     }
 
@@ -352,7 +369,6 @@
         studentLoadingEl.hidden = true
         studentRegisterEl.hidden = true
         studentCardEl.hidden = false
-        loadFeed()
         return
       }
 
@@ -385,12 +401,17 @@
       }
     })
 
+    const staffPinFieldEl = document.getElementById("staff-pin-field")
+    const staffPinInput = document.getElementById("staff-pin")
+
     registerForm.addEventListener("submit", async (e) => {
       e.preventDefault()
       registerErrorEl.hidden = true
       submitBtn.disabled = true
       try {
-        const newStudent = await registerOrResumeStudent(nameInput.value)
+        const newStudent = await registerOrResumeStudent(nameInput.value, staffPinFieldEl.hidden ? "" : staffPinInput.value)
+        staffPinInput.value = ""
+        staffPinFieldEl.hidden = true
         setStudentIdToLocalStorage(newStudent.id)
         try {
           localStorage.removeItem(REGISTER_DRAFT_KEY)
@@ -400,6 +421,11 @@
         student = newStudent
         await initStudentTab()
       } catch (err) {
+        // 運営の名前なら、合言葉の欄を出す
+        if (err && err.message === apiErrorMessage("staff_pin_required")) {
+          staffPinFieldEl.hidden = false
+          staffPinInput.focus()
+        }
         registerErrorEl.textContent = err && err.message ? err.message : "エラーが発生しました。もう一度お試しください。"
         registerErrorEl.hidden = false
       } finally {
@@ -414,6 +440,7 @@
       clearStudentIdFromLocalStorage()
       clearSharedDisplayName()
       student = null
+      resetFeed()
       nameInput.value = ""
       registerErrorEl.hidden = true
       studentCardEl.hidden = true
@@ -625,7 +652,7 @@
         clearForm()
         if (!wasEditing) fireConfetti()
         renderAll()
-        loadFeed()
+        refreshFeedIfLoaded()
       } catch (err) {
         showPostError(err && err.message ? err.message : "送信できませんでした。もう一度お試しください。")
       } finally {
@@ -746,7 +773,7 @@
           if (editingId === record.id) clearForm()
           applyStudent(updated)
           renderAll()
-          loadFeed()
+          refreshFeedIfLoaded()
         } catch (err) {
           del.disabled = false
           alert(err && err.message ? err.message : "削除できませんでした")
@@ -794,7 +821,12 @@
     // ---------------- みんなの記録(同じ期のメンバーだけ) ----------------
 
     const feedListEl = document.getElementById("feed-list")
+    const feedSectionEl = document.getElementById("feed")
+    const feedTabGateEl = document.getElementById("feed-tab-gate")
+    const feedTabGateTextEl = document.getElementById("feed-tab-gate-text")
+    const feedTabGateBtn = document.getElementById("feed-tab-gate-btn")
     const feedSubEl = document.getElementById("feed-sub")
+    const feedFilterEl = document.getElementById("feed-filter")
     const feedGateEl = document.getElementById("feed-gate")
     const feedLoadingEl = document.getElementById("feed-loading")
     const feedEmptyEl = document.getElementById("feed-empty")
@@ -802,11 +834,63 @@
     const feedMoreBtn = document.getElementById("feed-more-btn")
     const feedReloadBtn = document.getElementById("feed-reload-btn")
 
-    let feedGroup = ""
+    let feedLoaded = false // みんなの投稿タブを一度でも開いたか
+    let feedGroup = "" // 見ている人の期(運営なら "運営")
     let feedPending = false
     let feedPosts = []
     let feedComments = {}
+    let feedFilter = "" // 運営の絞り込み(""=すべて)
     let feedShown = FEED_PAGE_SIZE
+
+    feedTabGateBtn.addEventListener("click", () => showTab("student"))
+
+    function viewerIsStaff() {
+      return feedGroup === STAFF_GROUP || !!(student && student.group === STAFF_GROUP)
+    }
+
+    // 名前の出し方。運営は「運営・かすみん」。運営が見るときと、ほかの期の人(運営の記録へのコメント)には、
+    // 期も付ける(「3期・さくら」)。同じ期の人は名前だけ
+    function nameLabel(name, group) {
+      if (group === STAFF_GROUP) return `${STAFF_GROUP}・${name}`
+      const myGroup = feedGroup || (student && student.group) || ""
+      return group && (viewerIsStaff() || group !== myGroup) ? `${group}・${name}` : name
+    }
+
+    function showFeedTabGate(message, withButton) {
+      feedSectionEl.hidden = true
+      feedTabGateEl.hidden = false
+      feedTabGateTextEl.textContent = message
+      feedTabGateBtn.hidden = !withButton
+    }
+
+    async function initFeedTab() {
+      if (dayOffsetFromStart(PROGRAM_START_DATE) < 0) {
+        showFeedTabGate(`みんなの投稿は、${formatMdWeekday(PROGRAM_START_DATE)}にオープンします。`, false)
+        return
+      }
+      await studentReady
+      if (!student) {
+        showFeedTabGate("まず「わたしの記録」のタブで、お名前を入れてください。", true)
+        return
+      }
+      feedTabGateEl.hidden = true
+      feedSectionEl.hidden = false
+      feedLoaded = true
+      loadFeed()
+    }
+
+    function resetFeed() {
+      feedLoaded = false
+      feedGroup = ""
+      feedPosts = []
+      feedComments = {}
+      feedFilter = ""
+      feedListEl.innerHTML = ""
+    }
+
+    function refreshFeedIfLoaded() {
+      if (feedLoaded) loadFeed(true)
+    }
 
     // keepShown: 「もっと見る」で広げた件数を保つ(コメントしたあとの読み直しなど)
     async function loadFeed(keepShown) {
@@ -821,40 +905,70 @@
         if (keepShown !== true) feedShown = FEED_PAGE_SIZE
         renderFeed()
       } catch (err) {
-        feedErrorEl.textContent = "みんなの記録を読み込めませんでした。少し待ってから、更新ボタンを押してください。"
+        feedErrorEl.textContent = "みんなの投稿を読み込めませんでした。少し待ってから、更新ボタンを押してください。"
         feedErrorEl.hidden = false
       } finally {
         feedLoadingEl.hidden = true
       }
     }
 
+    // 運営の絞り込み(すべて / 3期 / 4期 …)。運営の記録は、どの期にも出す
+    function renderFeedFilter() {
+      feedFilterEl.hidden = !viewerIsStaff()
+      feedFilterEl.innerHTML = ""
+      if (!viewerIsStaff()) return
+      const groups = [...new Set(feedPosts.map((p) => p.group).filter((g) => g && g !== STAFF_GROUP))].sort()
+      ;["", ...groups].forEach((g) => {
+        const btn = document.createElement("button")
+        btn.type = "button"
+        btn.className = "filter-btn" + (g === feedFilter ? " active" : "")
+        btn.textContent = g || "すべて"
+        btn.addEventListener("click", () => {
+          feedFilter = g
+          feedShown = FEED_PAGE_SIZE
+          renderFeed()
+        })
+        feedFilterEl.appendChild(btn)
+      })
+    }
+
     function renderFeed() {
       feedListEl.innerHTML = ""
-      // 期が決まるまでは、みんなの記録は見られない(自分の記録は書ける)
+      // 期が決まるまでは、みんなの投稿は見られない(自分の記録は書ける)
       feedGateEl.hidden = !!feedGroup
       feedSubEl.hidden = !feedGroup
       if (!feedGroup) {
         feedGateEl.textContent = feedPending
-          ? "期(グループ)を確認しています。運営が確認したら、同じ期のメンバーの記録が見られるようになります。自分の記録は、このまま書けます。"
-          : "まだ期(グループ)の設定がありません。運営にお伝えください。設定されると、同じ期のメンバーの記録が見られるようになります。自分の記録は、このまま書けます。"
+          ? "期(グループ)を確認しています。運営が確認したら、同じ期のメンバーの投稿が見られるようになります。自分の記録は、「わたしの記録」のタブで、このまま書けます。"
+          : "まだ期(グループ)の設定がありません。運営にお伝えください。設定されると、同じ期のメンバーの投稿が見られるようになります。自分の記録は、「わたしの記録」のタブで、このまま書けます。"
+        feedFilterEl.hidden = true
         feedEmptyEl.hidden = true
         feedMoreBtn.hidden = true
         return
       }
-      feedSubEl.textContent = `${feedGroup}のメンバーの記録です。お名前は出ません。リアクションやコメントを送ろう。`
-      feedEmptyEl.hidden = feedPosts.length > 0
-      feedPosts.slice(0, feedShown).forEach((post) => feedListEl.appendChild(buildFeedItem(post)))
-      feedMoreBtn.hidden = feedPosts.length <= feedShown
+      feedSubEl.textContent = viewerIsStaff()
+        ? "運営として、すべての期の記録が見られます。いいねやコメントで一緒に参加できます。"
+        : `${feedGroup}のメンバーと運営の記録です。いいねやコメントを送ろう。`
+      renderFeedFilter()
+      const posts = feedFilter ? feedPosts.filter((p) => p.group === feedFilter || p.group === STAFF_GROUP) : feedPosts
+      feedEmptyEl.hidden = posts.length > 0
+      posts.slice(0, feedShown).forEach((post) => feedListEl.appendChild(buildFeedItem(post)))
+      feedMoreBtn.hidden = posts.length <= feedShown
     }
 
     function buildFeedItem(post) {
       const item = document.createElement("article")
       item.className = "feed-item"
       if (post.is_mine) item.classList.add("is-mine")
+      if (post.group === STAFF_GROUP) item.classList.add("is-staff")
 
       const meta = document.createElement("p")
       meta.className = "feed-meta"
-      meta.textContent = formatMdWeekday(post.date) + (post.is_mine ? "・あなたの記録" : "")
+      const name = document.createElement("span")
+      name.className = "feed-name"
+      name.textContent = post.is_mine ? `${nameLabel(post.display_name, post.group)}(あなた)` : nameLabel(post.display_name, post.group)
+      meta.appendChild(name)
+      meta.appendChild(document.createTextNode(`・${formatMdWeekday(post.date)}`))
       item.appendChild(meta)
 
       // 本文は textContent で入れる(HTMLとして解釈させない)
@@ -924,7 +1038,7 @@
 
     // コメントしたり消したりしたあとは、みんなの記録と自分の記録の両方を読み直す
     async function refreshResponses() {
-      const [fresh] = await Promise.all([getStudentById(student.id).catch(() => null), loadFeed(true)])
+      const [fresh] = await Promise.all([getStudentById(student.id).catch(() => null), feedLoaded ? loadFeed(true) : null])
       if (fresh) {
         applyStudent(fresh)
         renderMyRecords()
@@ -957,7 +1071,8 @@
 
       const meta = document.createElement("p")
       meta.className = "comment-meta"
-      const who = c.is_mine ? "あなた" : c.is_author ? "記録した人" : "メンバー"
+      // 名前(自分は「あなた」)。記録した本人のコメントには印を付ける
+      const who = c.is_mine ? "あなた" : nameLabel(c.display_name, c.group) + (c.is_author ? "(記録した人)" : "")
       meta.textContent = `${who}・${formatDateTime(c.created_at)}`
       el.appendChild(meta)
 
@@ -1202,7 +1317,8 @@
         adminPendingEl.appendChild(p)
         return
       }
-      const groups = knownGroups.length ? knownGroups : ["3期", "4期"]
+      const memberGroups = knownGroups.filter((g) => g !== STAFF_GROUP)
+      const groups = memberGroups.length ? memberGroups : ["3期", "4期"]
       pending.forEach((s) => {
         const item = document.createElement("div")
         item.className = "pending-item"
@@ -1363,7 +1479,8 @@
       }
     })
 
-    initStudentTab()
+    // 起動(みんなの投稿タブは、受講生の読み込みが終わってから使う)
+    const studentReady = initStudentTab()
   </script>
 </body>
 </html>

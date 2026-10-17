@@ -225,6 +225,7 @@ function apiErrorMessage(error) {
     own_post: "自分の記録にはリアクションできません",
     no_group: "まだ期(グループ)の設定がありません。運営にお知らせください",
     comment_too_long: "コメントは200文字以内で入力してください",
+    staff_pin_required: "運営の名前です。管理者の合言葉も入力してください",
     invalid_photo: "写真はJPEG・PNG・WebPの画像を選んでください",
     photo_too_large: "写真が大きすぎます。別の写真でお試しください",
     comment_not_found: "このコメントは見つかりませんでした",
@@ -237,11 +238,15 @@ function apiErrorMessage(error) {
 
 // ---- 受講生・投稿・リアクション ----
 
-async function registerOrResumeStudent(displayName) {
+// 運営の名前でログインするときだけ、pin(管理者の合言葉)が必要
+async function registerOrResumeStudent(displayName, pin) {
   const name = displayName.trim().slice(0, 40)
   if (!name) throw new Error("名前を入力してください")
-  return apiPost({ action: "registerOrResume", display_name: name })
+  return apiPost({ action: "registerOrResume", display_name: name, pin: pin || "" })
 }
+
+// 名簿で期を「運営」にした人(Code.gs の STAFF_GROUP と合わせる)
+const STAFF_GROUP = "運営"
 
 async function getStudentById(id) {
   if (!id) return null
@@ -266,7 +271,7 @@ async function deleteRecord(studentId, recordId) {
   return apiPost({ action: "deleteRecord", student_id: studentId, record_id: recordId })
 }
 
-// 同じ期のメンバーの記録とコメント。{ group, pending, posts, comments } が返る
+// 見られる記録(同じ期のメンバーと運営。運営はすべて)とコメント。{ group, pending, posts, comments } が返る
 async function fetchFeed(studentId) {
   return apiGet({ action: "feed", id: studentId })
 }
