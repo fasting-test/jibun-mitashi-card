@@ -1042,6 +1042,18 @@ textarea:focus {
   padding: 10px 14px;
 }
 
+.roster-one select {
+  flex: 1 1 140px;
+  min-width: 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
 .admin-ok {
   margin-top: 12px;
   font-size: 13px;

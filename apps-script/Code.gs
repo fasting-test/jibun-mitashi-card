@@ -42,6 +42,8 @@ const FEED_LIMIT = 300
 // 名簿で期を「運営」にした人は、すべての期の記録を見て、いいね・コメントできる。運営の記録は、すべての期に表示される。
 // なりすまし防止のため、運営の名前でログインするときだけ、管理者の合言葉(ADMIN_PIN)が必要。
 const STAFF_GROUP = "運営"
+// 0期・1期・2期は、まとめて1つのグループ「0〜2期」にする(画面側の app.js の GROUPS と合わせる)
+const ALUMNI_GROUP = "0〜2期"
 
 function doGet(e) {
   try {
@@ -543,7 +545,7 @@ function adminList(pin) {
         hidden: String(p.hidden) === "1",
       }
     })
-  const rosterRows = readTable(rosterSheet(), ROSTER_HEADERS).map((r) => ({ display_name: r.display_name, group: String(r.group) }))
+  const rosterRows = readTable(rosterSheet(), ROSTER_HEADERS).map((r) => ({ display_name: r.display_name, group: normalizeGroup(r.group) }))
   return { students, posts, roster: rosterRows }
 }
 
@@ -576,17 +578,26 @@ function normalizeName(value) {
   let s = String(value || "")
   if (s.normalize) s = s.normalize("NFKC")
   s = s.toLowerCase().replace(/[\s　]+/g, "")
-  s = s.replace(/^[0-9０-９]+期/, "")
+  s = s.replace(/^[0-9]+([~〜\-ー][0-9]+)?期/, "")
   s = s.replace(/[〜~ー\-_・･♡♥☆★!！?？.。、,，()（）「」『』\[\]【】*＊+＋]/g, "")
   const stripped = s.replace(/(ちゃん|さん|くん|さま|様|氏)$/, "")
   if (stripped.length >= 2) s = stripped
   return s
 }
 
+// 期の書き方をそろえる。全角/半角をそろえ、「0~2期」「0-2期」「1期」なども「0〜2期」にする
+function normalizeGroup(value) {
+  let g = String(value || "").trim()
+  if (g.normalize) g = g.normalize("NFKC")
+  g = g.replace(/\s+/g, "").replace(/[~〜\-ー–—]/g, "〜")
+  if (/^0〜2期$/.test(g) || /^[012]期$/.test(g)) return ALUMNI_GROUP
+  return g
+}
+
 // 名簿の行の一覧 [{ name: 整形した呼び名, group: "3期" }]
 function rosterEntries() {
   return readTable(rosterSheet(), ROSTER_HEADERS)
-    .map((r) => ({ name: normalizeName(r.display_name), raw: String(r.display_name).trim(), group: String(r.group).trim() }))
+    .map((r) => ({ name: normalizeName(r.display_name), raw: String(r.display_name).trim(), group: normalizeGroup(r.group) }))
     .filter((r) => r.name)
 }
 
@@ -765,7 +776,8 @@ function hideComment(pin, commentId, hidden) {
 }
 
 // 名簿(呼び名 → 期)に1人ぶん登録する。すでにあれば上書き。期を空にすると、グループなしになる。
-function upsertRoster(name, group) {
+function upsertRoster(name, rawGroup) {
+  const group = normalizeGroup(rawGroup)
   const sheet = rosterSheet()
   const key = String(name).trim().toLowerCase()
   const existing = readTable(sheet, ROSTER_HEADERS).find((r) => String(r.display_name).trim().toLowerCase() === key)
@@ -779,12 +791,12 @@ function setGroup(pin, displayName, group) {
   const name = String(displayName || "").trim()
   if (!name) return { error: "名前を入力してください" }
   upsertRoster(name, String(group || "").trim().slice(0, 20))
-  return { display_name: name, group: String(group || "").trim() }
+  return { display_name: name, group: normalizeGroup(group) }
 }
 
 // まとめて登録する。次の2つの書き方に対応する。
 //   A. 1行に「呼び名,期」(区切りは、カンマ・タブ・読点)
-//   B. 「3期」のような行を書いてから、その下に呼び名を1行ずつ並べる(次の「◯期」の行まで、その期になる)
+//   B. 「3期」「0〜2期」のような行を書いてから、その下に呼び名を1行ずつ並べる(次の「◯期」の行まで、その期になる)
 function importRoster(pin, text) {
   const authError = checkAdmin(pin)
   if (authError) return { error: authError }
@@ -795,8 +807,8 @@ function importRoster(pin, text) {
     .forEach((rawLine) => {
       const line = rawLine.trim()
       if (!line) return
-      if (/^[0-9０-９]+期$/.test(line)) {
-        currentGroup = line.normalize ? line.normalize("NFKC") : line
+      if (/^[0-9０-９]+(\s*[~〜～\-ー－]\s*[0-9０-９]+)?期$/.test(line)) {
+        currentGroup = normalizeGroup(line)
         return
       }
       const parts = line.split(/[,\t、，]/).map((s) => s.trim())

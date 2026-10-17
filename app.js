@@ -248,6 +248,16 @@ async function registerOrResumeStudent(displayName, pin) {
 // 名簿で期を「運営」にした人(Code.gs の STAFF_GROUP と合わせる)
 const STAFF_GROUP = "運営"
 
+// あらかじめ用意しておく期(グループ)。0期・1期・2期は「0〜2期」にまとめる(Code.gs の ALUMNI_GROUP と合わせる)。
+// 新しい期を始めるときは、ここに足す
+const GROUPS = ["0〜2期", "3期", "4期", "5期"]
+
+// 用意した期を先に、名簿にだけある期をそのあとに並べる(運営は除く)
+function groupOptions(extra) {
+  const rest = (extra || []).filter((g) => g && g !== STAFF_GROUP && !GROUPS.includes(g)).sort()
+  return [...GROUPS, ...rest]
+}
+
 async function getStudentById(id) {
   if (!id) return null
   const data = await apiGet({ action: "get", id })

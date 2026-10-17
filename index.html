@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=14" />
+  <link rel="stylesheet" href="style.css?v=15" />
 </head>
 <body>
   <main id="main-el">
@@ -220,12 +220,12 @@
           <p class="admin-summary">記録は、同じ期のメンバーだけで見せ合います。受講生の「呼び名」と期を登録してください(呼び名は、受講生が入力する名前と、まったく同じにします)。</p>
           <p class="admin-summary">運営として参加する人は、「1人登録」で期を「運営」にしてください。すべての期の記録を見て、いいね・コメントでき、運営の記録はすべての期に表示されます。運営の名前でログインするときは、この管理者の合言葉が必要です。</p>
           <div class="admin-roster">
-            <label for="roster-text">まとめて登録(1行に1人、「呼び名,期」の形。マイページの一覧をコピーして貼り付けできます)</label>
-            <textarea id="roster-text" rows="4" placeholder="例:&#10;はなちゃん,3期&#10;さくら,4期"></textarea>
+            <label for="roster-text">まとめて登録(1行に1人、「呼び名,期」の形。または「3期」「0〜2期」の行の下に、呼び名を1行ずつ。マイページの一覧をコピーして貼り付けできます)</label>
+            <textarea id="roster-text" rows="4" placeholder="例:&#10;はなちゃん,3期&#10;さくら,0〜2期"></textarea>
             <button type="button" class="btn-primary admin-small-btn" id="roster-import-btn">まとめて登録する</button>
             <div class="roster-one">
               <input id="roster-name" type="text" maxlength="40" placeholder="呼び名" />
-              <input id="roster-group" type="text" maxlength="20" placeholder="期(例: 3期)" />
+              <select id="roster-group" aria-label="期"></select>
               <button type="button" class="btn-primary admin-small-btn" id="roster-set-btn">1人登録</button>
             </div>
             <p class="admin-summary" id="roster-summary"></p>
@@ -242,7 +242,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="config.js?v=2"></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
   <script>
     const REGISTER_DRAFT_KEY = STORAGE_PREFIX + "register_draft"
     const ADMIN_PIN_KEY = STORAGE_PREFIX + "admin_pin"
@@ -917,7 +917,7 @@
       feedFilterEl.hidden = !viewerIsStaff()
       feedFilterEl.innerHTML = ""
       if (!viewerIsStaff()) return
-      const groups = [...new Set(feedPosts.map((p) => p.group).filter((g) => g && g !== STAFF_GROUP))].sort()
+      const groups = groupOptions(feedPosts.map((p) => p.group))
       ;["", ...groups].forEach((g) => {
         const btn = document.createElement("button")
         btn.type = "button"
@@ -1292,9 +1292,9 @@
         if (r.group) groups[r.group] = (groups[r.group] || 0) + 1
       })
       knownGroups = Object.keys(groups).sort()
-      rosterSummaryEl.textContent = knownGroups.length
-        ? `登録済み: ${knownGroups.map((g) => `${g}: ${groups[g]}人`).join(" / ")}`
-        : "まだ誰も登録されていません"
+      const summaryGroups = [...groupOptions(knownGroups), ...(groups[STAFF_GROUP] ? [STAFF_GROUP] : [])]
+      rosterSummaryEl.textContent = `登録済み: ${summaryGroups.map((g) => `${g}: ${groups[g] || 0}人`).join(" / ")}`
+      renderRosterGroupOptions()
 
       adminPostsEl.innerHTML = ""
       data.posts.forEach((p) => adminPostsEl.appendChild(buildAdminPost(p)))
@@ -1317,8 +1317,7 @@
         adminPendingEl.appendChild(p)
         return
       }
-      const memberGroups = knownGroups.filter((g) => g !== STAFF_GROUP)
-      const groups = memberGroups.length ? memberGroups : ["3期", "4期"]
+      const groups = groupOptions(knownGroups)
       pending.forEach((s) => {
         const item = document.createElement("div")
         item.className = "pending-item"
@@ -1464,10 +1463,30 @@
       }
     })
 
+    // 1人登録の期の選択肢(用意した期+名簿にある期+運営+期を外す)
+    function renderRosterGroupOptions() {
+      const current = rosterGroupEl.value
+      rosterGroupEl.innerHTML = ""
+      const options = [["", "期を選ぶ"], ...groupOptions(knownGroups).map((g) => [g, g]), [STAFF_GROUP, STAFF_GROUP], ["__none__", "期を外す"]]
+      options.forEach(([value, label]) => {
+        const opt = document.createElement("option")
+        opt.value = value
+        opt.textContent = label
+        rosterGroupEl.appendChild(opt)
+      })
+      if ([...rosterGroupEl.options].some((o) => o.value === current)) rosterGroupEl.value = current
+    }
+    renderRosterGroupOptions()
+
     rosterSetBtn.addEventListener("click", async () => {
+      if (!rosterGroupEl.value) {
+        rosterMessage(false, "期を選んでください")
+        return
+      }
       rosterSetBtn.disabled = true
       try {
-        const result = await adminSetGroup(adminPin, rosterNameEl.value, rosterGroupEl.value)
+        const group = rosterGroupEl.value === "__none__" ? "" : rosterGroupEl.value
+        const result = await adminSetGroup(adminPin, rosterNameEl.value, group)
         rosterNameEl.value = ""
         rosterGroupEl.value = ""
         rosterMessage(true, result.group ? `${result.display_name} を ${result.group} に登録しました` : `${result.display_name} の期を外しました`)
