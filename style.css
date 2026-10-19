@@ -71,6 +71,13 @@ body {
   top: 92px;
   width: 52px;
   height: auto;
+  display: none;
+}
+
+/* 枝の線画は、タイトルの画面(ログイン・オープン前)だけに出す。ほかの画面では文字と重なるため */
+body:has(#student-register:not([hidden]):not(.tab-panel[hidden] *)) .page-deco svg,
+body:has(#student-soon:not([hidden]):not(.tab-panel[hidden] *)) .page-deco svg {
+  display: block;
 }
 
 /* 広い画面では、本文の右どなりに置く */
