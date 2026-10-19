@@ -1,23 +1,27 @@
-/* 「ネイビー × ゴールド」エディトリアルテーマ(セリフ見出し・ダイヤの区切り) */
+/* 「オフホワイト × くすみピンク」テーマ(見本: わたし推し活月間のタイトル画像)。
+   見出しは太めのゴシック、小さな英字は字間を広く。右上に淡いピンクの円と、枝の線画を置く */
 
 :root {
-  color-scheme: dark;
-  --background: #0e1a34;
-  --foreground: #f4efe0;
+  color-scheme: light;
+  --background: #f8f4f0;
+  --foreground: #4a3f3f;
 
-  --surface-1: #17284a;
-  --surface-2: #1d3055;
-  --text-primary: #ecd18f;
-  --text-secondary: #aab4cc;
-  --text-muted: #7c88a3;
-  --accent: #d9b976;
-  --accent-2: #e8c87e;
-  --gridline: rgba(217, 185, 118, 0.2);
-  --border: rgba(217, 185, 118, 0.28);
+  --surface-1: #ffffff;
+  --surface-2: #f4e9e7;
+  --text-primary: #4a3f3f;
+  --text-secondary: #75686a;
+  --text-muted: #9a8d8e;
+  --accent: #b5737f;
+  --accent-2: #e2c3c4;
+  --deco: #ecd6d5;
+  --gridline: rgba(181, 115, 127, 0.16);
+  --border: rgba(181, 115, 127, 0.3);
+  --danger: #b4424f;
 
-  --gradient-primary: linear-gradient(135deg, #c9a227 0%, #f2c744 100%);
-  --glow-shadow: 0 10px 26px -6px rgba(0, 0, 0, 0.5);
-  --font-serif: "Shippori Mincho B1", "Hiragino Mincho ProN", serif;
+  --gradient-primary: linear-gradient(135deg, #c48893 0%, #a4606f 100%);
+  --glow-shadow: 0 8px 22px -12px rgba(110, 70, 75, 0.3);
+  /* 見出し用(以前は明朝。見本に合わせて太めのゴシックにした) */
+  --font-serif: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
 }
 
 * {
@@ -30,7 +34,56 @@ body {
   display: flex;
   background-color: var(--background);
   color: var(--foreground);
-  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", sans-serif;
+  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+  position: relative;
+}
+
+/* 右上の淡いピンクの円と、枝の線画(飾り。クリックなどの邪魔をしない)。
+   はみ出した部分で画面が横に広がらないよう、枠の中で切る */
+.deco-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 640px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page-deco {
+  position: absolute;
+  top: 96px;
+  right: -150px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: var(--deco);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page-deco svg {
+  position: absolute;
+  left: 66px;
+  top: 92px;
+  width: 52px;
+  height: auto;
+}
+
+/* 広い画面では、本文の右どなりに置く */
+@media (min-width: 640px) {
+  .page-deco {
+    top: 40px;
+    right: calc(50% - 420px);
+    width: 340px;
+    height: 340px;
+  }
+}
+
+main {
+  position: relative;
+  z-index: 1;
 }
 
 .diamond-divider {
@@ -155,7 +208,7 @@ main.wide {
 .lead h1 {
   font-family: var(--font-serif);
   font-size: 23px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.6;
   margin: 12px 0 0;
   color: var(--text-primary);
@@ -166,6 +219,37 @@ main.wide {
   line-height: 1.7;
   color: var(--text-secondary);
   margin: 12px 0 0;
+}
+
+/* ログイン・オープン前のタイトル(見本の画像と同じ並び) */
+.lead.hero {
+  text-align: left;
+  margin: 8px 0 36px;
+}
+
+.lead.hero .eyebrow {
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+}
+
+.lead.hero h1 {
+  font-size: 30px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+
+.lead.hero .catch {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-top: 16px;
+}
+
+.lead.hero .sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 10px;
 }
 
 label {
@@ -273,7 +357,7 @@ input[type="password"]:focus {
 .error {
   margin-top: 12px;
   font-size: 13px;
-  color: #ff8f8f;
+  color: var(--danger);
   text-align: center;
 }
 
@@ -291,7 +375,7 @@ input[type="password"]:focus {
   height: auto;
   margin-bottom: -6px;
   z-index: 1;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 6px 14px rgba(110, 70, 75, 0.22));
   animation: bounce-in 0.35s ease-out;
 }
 
@@ -318,7 +402,7 @@ input[type="password"]:focus {
   font-family: var(--font-serif);
   margin: 6px 0 0;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.6;
   color: var(--text-primary);
 }
@@ -363,7 +447,7 @@ input[type="password"]:focus {
   font-family: var(--font-serif);
   margin: 4px 0 0;
   font-size: 19px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -419,7 +503,7 @@ input[type="password"]:focus {
   font-family: var(--font-serif);
   margin: 10px 0 0;
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -563,7 +647,7 @@ input[type="password"]:focus {
   font-family: var(--font-serif);
   margin: 0 0 12px;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.6;
   color: var(--text-primary);
 }
@@ -637,7 +721,7 @@ textarea:focus {
   font-family: var(--font-serif);
   margin: 0;
   font-size: 19px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -767,7 +851,7 @@ textarea:focus {
   font-family: var(--font-serif);
   margin: 32px 0 6px;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -803,7 +887,7 @@ textarea:focus {
   text-align: center;
   font-family: var(--font-serif);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-secondary);
   text-decoration: none;
 }
@@ -838,7 +922,7 @@ textarea:focus {
   margin: 8px 0 0;
   font-family: var(--font-serif);
   font-size: 30px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -891,7 +975,7 @@ textarea:focus {
 }
 
 .btn-link.danger {
-  color: #ff9f9f;
+  color: var(--danger);
 }
 
 .post-photo-link {
@@ -1091,7 +1175,7 @@ textarea:focus {
   font-family: var(--font-serif);
   margin: 0 0 14px;
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -1117,7 +1201,7 @@ textarea:focus {
 .check-row input {
   width: 20px;
   height: 20px;
-  accent-color: #d9b976;
+  accent-color: #b5737f;
   cursor: pointer;
 }
 
@@ -1280,7 +1364,7 @@ textarea:focus {
 .pending-name {
   margin: 0;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-primary);
 }
 

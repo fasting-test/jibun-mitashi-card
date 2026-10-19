@@ -4,12 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>わたし推し活</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@400;700;800&display=swap" />
-  <link rel="stylesheet" href="style.css?v=15" />
+  <link rel="stylesheet" href="style.css?v=17" />
 </head>
 <body>
+  <!-- 飾り: 右上の淡いピンクの円と、枝の線画 -->
+  <div class="deco-layer" aria-hidden="true"><div class="page-deco">
+    <svg viewBox="0 0 60 112" fill="none" stroke="#b5737f" stroke-width="1.2" stroke-linecap="round">
+      <path d="M6 110 C 18 84, 30 52, 54 4" />
+      <ellipse cx="22" cy="90" rx="3.6" ry="8.5" transform="rotate(58 22 90)" />
+      <ellipse cx="11" cy="72" rx="3.6" ry="8.5" transform="rotate(-48 11 72)" />
+      <ellipse cx="36" cy="58" rx="3.6" ry="8.5" transform="rotate(60 36 58)" />
+      <ellipse cx="25" cy="39" rx="3.4" ry="8" transform="rotate(-44 25 39)" />
+      <ellipse cx="50" cy="26" rx="3.2" ry="7.5" transform="rotate(62 50 26)" />
+      <ellipse cx="55" cy="6" rx="2.8" ry="6.5" transform="rotate(28 55 6)" />
+    </svg>
+  </div></div>
   <main id="main-el">
     <!-- デモ環境のときだけ出す(?demo=1) -->
     <p class="demo-banner" id="demo-banner" hidden>デモ環境です。本番とは別のデータなので、自由に試せます(日付は11/14として動きます)。</p>
@@ -32,10 +41,11 @@
 
       <!-- オープン前(11/1より前)の画面 -->
       <div id="student-soon" hidden>
-        <div class="lead">
-          <p class="eyebrow">わたし推し活</p>
+        <div class="lead hero">
+          <p class="eyebrow">NOVEMBER 2026</p>
           <h1 id="soon-title"></h1>
-          <p>毎日の小さな「好き」を記録して、<br />「私って、こんなことが好きなんだ」を見つけていく30日間です。</p>
+          <p class="catch">「好き」を見つけて、心のエネルギーチャージ</p>
+          <p class="sub">小さな「好き」から、自分の気持ちに気づく1か月</p>
         </div>
         <div class="soon-count">
           <p class="soon-count-label">オープンまで</p>
@@ -46,10 +56,11 @@
 
       <!-- 登録フォーム -->
       <div id="student-register" hidden>
-        <div class="lead">
-          <p class="eyebrow">わたし推し活</p>
-          <h1>今日の小さな「好き」を、<br />記録しよう。</h1>
-          <p>やってみたことを書きとめて、あとから見返す。<br />「私って、こんなことが好きなんだ」の発見につなげよう。</p>
+        <div class="lead hero">
+          <p class="eyebrow">NOVEMBER 2026</p>
+          <h1>わたし推し活月間</h1>
+          <p class="catch">「好き」を見つけて、心のエネルギーチャージ</p>
+          <p class="sub">小さな「好き」から、自分の気持ちに気づく1か月</p>
         </div>
 
         <form id="register-form">
