@@ -407,22 +407,6 @@ input[type="password"]:focus {
   color: var(--text-secondary);
 }
 
-.audio-link {
-  display: inline-block;
-  margin-top: 12px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  background: var(--gradient-primary);
-  color: var(--background);
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.audio-link:hover {
-  opacity: 0.9;
-}
-
 .challenge-header {
   text-align: left;
   margin-bottom: 24px;
@@ -854,10 +838,6 @@ textarea:focus {
 .admin-hide-btn {
   margin: 8px 0 0;
   padding: 4px 0;
-}
-
-.audio-link[hidden] {
-  display: none;
 }
 
 /* --- ツールの切り替え(チャレンジシート ⇔ 自分満たし) --- */

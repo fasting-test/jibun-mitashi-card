@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>わたし推し活</title>
-  <link rel="stylesheet" href="style.css?v=18" />
+  <link rel="stylesheet" href="style.css?v=19" />
 </head>
 <body>
   <!-- 飾り: 右上の淡いピンクの円と、枝の線画 -->
@@ -96,7 +96,6 @@
           <div class="bubble">
             <p class="label">今日のひとこと</p>
             <p class="quote" id="quote-title"></p>
-            <a class="audio-link" id="audio-link" href="https://skipf-members.vercel.app/audio.html" target="_blank" rel="noopener noreferrer" hidden>🎧 今日の音声を聞く</a>
           </div>
         </div>
 
@@ -294,7 +293,6 @@
     const registerErrorEl = document.getElementById("register-error")
 
     const quoteTitleEl = document.getElementById("quote-title")
-    const audioLinkEl = document.getElementById("audio-link")
     const writeTitleEl = document.getElementById("write-title")
     const writeFormWrapEl = document.getElementById("write-form-wrap")
     const writeClosedEl = document.getElementById("write-closed")
@@ -471,11 +469,6 @@
 
     function renderQuote() {
       const name = withChan(student.display_name)
-
-      // 今日が「N日目」なら、音声サイトのN日目のページへ(期間が終わっていれば最終日)。始まる前は出さない
-      const dayNumber = Math.min(Math.max(todayOffset + 1, 1), PROGRAM_LENGTH)
-      audioLinkEl.hidden = todayOffset < 0
-      audioLinkEl.href = `https://skipf-members.vercel.app/audio.html?day=${dayNumber}`
 
       if (todayOffset < 0) {
         quoteTitleEl.textContent = `${name}、${formatMdWeekday(student.start_date)}からスタート。楽しみに待っていてね!`
