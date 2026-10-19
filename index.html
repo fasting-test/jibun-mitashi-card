@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>わたし推し活</title>
-  <link rel="stylesheet" href="style.css?v=17" />
+  <link rel="stylesheet" href="style.css?v=18" />
 </head>
 <body>
   <!-- 飾り: 右上の淡いピンクの円と、枝の線画 -->
@@ -93,7 +93,6 @@
       <!-- 記録の画面 -->
       <div id="student-card" hidden>
         <div class="character-quote">
-          <img id="character-img" class="character-img" src="" alt="" />
           <div class="bubble">
             <p class="label">今日のひとこと</p>
             <p class="quote" id="quote-title"></p>
@@ -253,7 +252,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <script src="config.js?v=2"></script>
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
   <script>
     const REGISTER_DRAFT_KEY = STORAGE_PREFIX + "register_draft"
     const ADMIN_PIN_KEY = STORAGE_PREFIX + "admin_pin"
@@ -294,7 +293,6 @@
     const submitBtn = document.getElementById("submit-btn")
     const registerErrorEl = document.getElementById("register-error")
 
-    const characterImgEl = document.getElementById("character-img")
     const quoteTitleEl = document.getElementById("quote-title")
     const audioLinkEl = document.getElementById("audio-link")
     const writeTitleEl = document.getElementById("write-title")
@@ -371,7 +369,6 @@
         setSharedDisplayName(student.display_name)
         applyStudent(student)
         todayOffset = dayOffsetFromStart(student.start_date)
-        characterImgEl.src = randomCharacterImage()
 
         renderSenseList()
         renderDateOptions()

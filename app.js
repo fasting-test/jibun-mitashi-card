@@ -91,14 +91,6 @@ function withChan(name) {
   return name.endsWith("ちゃん") || name.endsWith("さん") || name.endsWith("くん") ? name : `${name}ちゃん`
 }
 
-// ---- 吹き出しで話すキャラクター(3種類からランダム) ----
-
-const CHARACTER_IMAGES = ["images/character-1.png", "images/character-2.png", "images/character-3.png"]
-
-function randomCharacterImage() {
-  return CHARACTER_IMAGES[Math.floor(Math.random() * CHARACTER_IMAGES.length)]
-}
-
 // ---- 受講生IDの保存(この端末が「自分は誰か」を覚えておくためだけのもの。
 //      本体データはスプレッドシート側にある) ----
 
